@@ -1,0 +1,1 @@
+## Validates GeoTIFF as cog with overview against GeoTIFF dataset template.
