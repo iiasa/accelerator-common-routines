@@ -1,0 +1,1 @@
+## converts normal geotiff to clould optimized geotif and validates metadata against dataset template 

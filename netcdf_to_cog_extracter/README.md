@@ -1,0 +1,1 @@
+## Extracts cloud optimized geotiffs from netcdf and validates the generated geotiff
