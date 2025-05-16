@@ -12,8 +12,6 @@ from accli import AjobCliService
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError, SchemaError
 
-env = get_environment_variables()
-
 
 class CaseInsensitiveDict(dict):
     def __init__(self, *args, **kwargs):

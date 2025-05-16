@@ -2,6 +2,25 @@ import os
 import rasterio
 from rio_cogeo.cogeo import cog_translate
 from rio_cogeo.profiles import cog_profiles
+from accli import AjobCliService
+from jsonschema import validate as jsonschema_validate
+from jsonschema.exceptions import ValidationError, SchemaError
+
+
+
+
+dataset_template_id = os.environ.get('dataset_template_id')
+
+project_service = AjobCliService(
+    os.environ.get('ACC_JOB_TOKEN'),
+    server_url=os.environ.get('ACC_JOB_GATEWAY_SERVER'),
+    verify_cert=False
+)
+
+
+dataset_template_details = project_service.get_dataset_template_details(dataset_template_id)
+metadata_schema =  dataset_template_details.get('rules')['root']
+
 
 
 input_directory = 'inputs'
@@ -17,13 +36,30 @@ for input_tif in files:
         
         # Check for 'variable' and 'unit' in the global metadata
         global_variable = global_metadata.get('variable', 'Not available')
-        global_unit = global_metadata.get('unit', 'Not available')
+        global_unit = global_metadata.get('units', 'Not available')
         
         # Print global metadata
         print("Global Metadata:")
         print(f"  Variable: {global_variable}")
         print(f"  Unit: {global_unit}")
         print(f"Nodata: {src.nodata}")
+
+
+        try:
+            jsonschema_validate(
+                metadata_schema
+                global_metadata
+            )
+
+        except SchemaError as schema_error:
+           
+            raise ValueError(
+                f"Schema itself is not valid with template id. Template id: {dataset_template_id}. Original exception: {str(schema_error)}"
+            )
+        except ValidationError as validation_error:
+            raise ValueError(
+                f"Invalid data. Template id: {dataset_template_id}. Data: {str(validation_error)}. Original exception: {str(validation_error)}"
+            )
         
         # Read the number of bands in the file
         num_bands = src.count
