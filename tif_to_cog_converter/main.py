@@ -24,7 +24,6 @@ metadata_schema =  dataset_template_details.get('rules')['root']
 
 
 input_directory = 'inputs'
-output_directory = "outputs"
 
 files = [f for f in os.listdir(input_directory)
          if os.path.isfile(os.path.join(input_directory, f)) and f != '.gitkeep']
@@ -47,7 +46,7 @@ for input_tif in files:
 
         try:
             jsonschema_validate(
-                metadata_schema
+                metadata_schema,
                 global_metadata
             )
 
@@ -77,31 +76,16 @@ for input_tif in files:
             # Get metadata (tags) for the current band
             band_metadata = src.tags(band_index)
             
-            # Check for 'variable' and 'unit' in the band metadata
-            band_variable = band_metadata.get('variable', 'Not available')
-            band_unit = band_metadata.get('unit', 'Not available')
-            
-            # Print band-specific metadata
-            print(f"\nBand {band_index} Metadata:")
-            print(f"  Variable: {band_variable}")
-            print(f"  Unit: {band_unit}")
+            global_metadata.update(band_metadata)
+
+            dst_profile.update_tags(band_metadata)
             
             # Prepare metadata for the band (can include global metadata if needed)
             # Here we use both global and band-specific metadata
             
-            if num_bands == 1:
-                band_variable = band_variable if band_variable else global_variable
-                band_unit = band_unit if band_unit else global_unit
-            
-            additional_cog_metadata = {
-                # "variable": band_variable,
-                # "unit": band_unit,
-                "variable": 'forest_cover',
-                "unit": "adimensional"
-            }
             
             # Define output file path for the individual band COG
-            output_band_path = f"band_{band_index}_output_cog.tif"
+            output_band_path = f"outputs/band_{band_index}_output_cog.tif"
 
             dst_profile.update({
                 "dtype": "float32",  # Use the correct data type
@@ -124,7 +108,6 @@ for input_tif in files:
                 },
                 in_memory=False,  # Keep file processing on disk
                 quiet=False,  # Verbose output for debugging
-                additional_cog_metadata={**additional_cog_metadata}  # Merge global and band metadata
             )
             
             print(f"COG for band {band_index} saved as {output_band_path}")

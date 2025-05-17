@@ -1,23 +1,30 @@
 import os
 from service import CsvRegionalTimeseriesVerificationService 
 
-selected_filenames = os.environ.get('selecteted_filenames', '')
-selected_filenames = selected_filenames.split(',')
-selected_files_ids = os.environ.get('selected_files_ids', '')
-selected_files_ids = selected_files_ids.split(',')
+# selected_filenames = os.environ.get('selecteted_filenames', '')
+# selected_filenames = selected_filenames.split(',')
+# selected_files_ids = os.environ.get('selected_files_ids', '')
+# selected_files_ids = selected_files_ids.split(',')
 
-for index in range(len(selected_files_ids)):
-        filename = selected_filenames[index]
-        bucket_object_id = selected_files_ids[index]
-        
-        print(f"_____________Validating file: {filename} _____________")
-   
-        csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
-            bucket_object_id=bucket_object_id,
-            dataset_template_id=os.environ.get('dataset_template_id'),
-            job_token=os.environ.get('ACC_JOB_TOKEN'),
-            s3_filename=filename
-        )
-        csv_regional_timeseries_verification_service()
+input_directory = 'inputs'
 
-        print(f"_____________DONE: Validating file: {filename} _____________")
+files = []
+for dirpath, dirnames, filenames in os.walk(input_directory):
+    for f in filenames:
+        if f != '.gitkeep':
+            full_path = os.path.join(dirpath, f)
+            relative_path = os.path.relpath(full_path, start=os.getcwd())
+            files.append(relative_path)
+
+for file in files:
+    
+    print(f"_____________Validating file: {file} _____________")
+
+    csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
+        dataset_template_id=os.environ.get('dataset_template_id'),
+        job_token=os.environ.get('ACC_JOB_TOKEN'),
+        filename=file
+    )
+    csv_regional_timeseries_verification_service()
+
+    print(f"_____________DONE: Validating file: {file} _____________")

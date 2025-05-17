@@ -419,6 +419,7 @@ class CsvRegionalTimeseriesVerificationService():
                 file_stream,
             )
 
+            
         # Monkey patch serializer
         def monkey_patched_json_encoder_default(encoder, obj):
             if isinstance(obj, set):
