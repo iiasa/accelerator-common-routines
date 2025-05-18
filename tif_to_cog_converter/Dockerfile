@@ -19,3 +19,5 @@ RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r /app/requirements.txt
 
 COPY ./ /app
+
+WORKDIR /app
