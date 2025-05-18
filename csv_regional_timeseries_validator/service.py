@@ -302,7 +302,7 @@ class CsvRegionalTimeseriesVerificationService():
                 self.filename[7:],
                 file_stream,
             )
-        return bucket_object_id
+            return bucket_object_id
     
     def delete_local_file(self, filepath):
         if os.path.exists(filepath):
