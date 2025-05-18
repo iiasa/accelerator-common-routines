@@ -12,12 +12,12 @@ RUN apt-get update && \
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
-COPY ./requirements.txt /app/requirements.txt
+COPY ./tif_to_cog_converter/requirements.txt /app/requirements.txt
 
 RUN pip install --upgrade pip setuptools wheel
 
 RUN pip install -r /app/requirements.txt
 
-COPY ./ /app
+COPY ./tif_to_cog_converter/ /app
 
 WORKDIR /app
