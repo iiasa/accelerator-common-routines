@@ -1,11 +1,6 @@
 import os
 from service import CsvRegionalTimeseriesVerificationService 
 
-# selected_filenames = os.environ.get('selecteted_filenames', '')
-# selected_filenames = selected_filenames.split(',')
-# selected_files_ids = os.environ.get('selected_files_ids', '')
-# selected_files_ids = selected_files_ids.split(',')
-
 input_directory = 'inputs'
 
 files = []
@@ -21,10 +16,11 @@ for file in files:
     print(f"_____________Validating file: {file} _____________")
 
     csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
+        filename=file,
         dataset_template_id=os.environ.get('dataset_template_id'),
-        job_token=os.environ.get('ACC_JOB_TOKEN'),
-        filename=file
+        job_token=os.environ.get('ACC_JOB_TOKEN')
     )
+
     csv_regional_timeseries_verification_service()
 
     print(f"_____________DONE: Validating file: {file} _____________")

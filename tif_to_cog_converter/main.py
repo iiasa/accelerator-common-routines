@@ -1,4 +1,5 @@
 import os
+import json
 import rasterio
 from rio_cogeo.cogeo import cog_translate
 from rio_cogeo.profiles import cog_profiles
@@ -78,7 +79,7 @@ for input_tif in files:
             
             global_metadata.update(band_metadata)
 
-            dst_profile.update_tags(band_metadata)
+            dst_profile.update_tags(global_metadata)
             
             # Prepare metadata for the band (can include global metadata if needed)
             # Here we use both global and band-specific metadata
@@ -111,3 +112,29 @@ for input_tif in files:
             )
             
             print(f"COG for band {band_index} saved as {output_band_path}")
+
+
+            with open(output_band_path, "rb") as file_stream:
+                uploaded_bucket_object_id = project_service.add_filestream_as_job_output(
+                    output_band_path,
+                    file_stream,
+                )
+
+            # Monkey patch serializer
+            def monkey_patched_json_encoder_default(encoder, obj):
+                if isinstance(obj, set):
+                    return list(obj)
+                return json.JSONEncoder.default(encoder, obj)
+
+            json.JSONEncoder.default = monkey_patched_json_encoder_default
+            # Monkey patch serializer
+
+
+            project_service.register_validation(
+                uploaded_bucket_object_id,
+                dataset_template_id,
+                global_metadata,
+                []
+            )
+            print('Merge complete')
+

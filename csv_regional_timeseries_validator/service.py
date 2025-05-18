@@ -61,10 +61,9 @@ class CsvRegionalTimeseriesVerificationService():
     def __init__(
         self,
         *,
-        bucket_object_id,
+        filename,
         dataset_template_id,
         job_token,
-        s3_filename,
         csv_fieldnames: Optional[list[str]]=None,
         ram_required=4 * 1024**3,
         disk_required=6 * 1024**3,
@@ -79,30 +78,22 @@ class CsvRegionalTimeseriesVerificationService():
 
         self.dataset_template_id = dataset_template_id
 
-        self.bucket_object_id = bucket_object_id
+        self.filename = filename
 
         self.ram_required = ram_required
         self.disk_required = disk_required
         self.cores_required = cores_required
 
         self.csv_fieldnames = csv_fieldnames
-
-        self.temp_downloaded_filename = f"{uuid.uuid4().hex}.csv"
-        self.temp_validated_filename = f"{uuid.uuid4().hex}.csv"
-        self.temp_sorted_filename = f"{uuid.uuid4().hex}.csv"
-        self.temp_dir = f"tmp_files"
-        self.temp_downloaded_filepath = (
-            f"{self.temp_dir}/{self.temp_downloaded_filename}"
-        )
+        
+        # Remove csv extensiopn from filename and add validation.csv. filename is relative filepath
         self.temp_validated_filepath = (
-            f"{self.temp_dir}/{self.temp_validated_filename}"
+            f"{self.filename.split('.csv')[0]}_validation.csv"
         )
 
         self.temp_sorted_filepath = (
-            f"{self.temp_dir}/{self.temp_sorted_filename}"
+            f"{self.filename.split('.csv')[0]}_sorted.csv"
         )
-
-        self.s3_filename = s3_filename
 
         self.errors = dict()
     
@@ -119,19 +110,6 @@ class CsvRegionalTimeseriesVerificationService():
                 "max_value": float('-inf')
             }
         }
-
-    def download_file(self):
-        print('Downloading file to validate.')
-        response = self.project_service.get_file_stream(
-            self.bucket_object_id
-        )
-
-        with open(self.temp_downloaded_filepath, "wb") as tmp_file:
-            for data in response.stream(amt=1024 * 1024):
-                size = tmp_file.write(data)
-
-        response.release_conn()
-        print('File download complete')
 
     def set_csv_regional_validation_rules(self):
         dataset_template_details = self.project_service.get_dataset_template_details(self.dataset_template_id)
@@ -255,7 +233,7 @@ class CsvRegionalTimeseriesVerificationService():
 
         return row          
     def get_validated_rows(self):
-        with open(self.temp_downloaded_filepath) as csvfile:
+        with open(self.filename) as csvfile:
             reader = csv.DictReader(
                 lower_rows(csvfile), 
                 fieldnames=self.csv_fieldnames, 
@@ -317,10 +295,11 @@ class CsvRegionalTimeseriesVerificationService():
                 writer.writerow(row)
         
 
-    def replace_file_content(self, local_file_path, bucket_object_id):
+    def replace_file_content(self, local_file_path):
         with open(local_file_path, "rb") as file_stream:
             bucket_object_id = self.project_service.replace_bucket_object_id_content(
-                bucket_object_id,
+                # self.filename starts with 'inputs/' string remove it. eg. inputs/xyz/exp.csv
+                self.filename[7:],
                 file_stream,
             )
         return bucket_object_id
@@ -361,18 +340,13 @@ class CsvRegionalTimeseriesVerificationService():
             parquet_writer.close()
                 
     def __call__(self):
-        self.download_file()
         self.set_csv_regional_validation_rules()
 
         self.init_validation_metadata()
         
-        try:
-            self.create_validated_file()
-            print('File validated against rules.')
-        finally:
-            self.delete_local_file(self.temp_downloaded_filepath)
-            print('Temporary downloaded file deleted')
-
+        self.create_validated_file()
+        print('File validated against rules.')
+        
         if self.errors:
             for key in self.errors:
                 print(f"Invalid data: {self.errors[key]}")
@@ -380,6 +354,11 @@ class CsvRegionalTimeseriesVerificationService():
             self.delete_local_file(self.temp_validated_filepath)
             print('Temporary validated file deleted')
             raise ValueError("Invalid data: Data not comply with template rules.")
+        
+
+        if os.environ.get('VERIFY_ONLY'):
+            print('Validation complete. Validation not registered in server as VERIFY_ONLY is set.')
+            return
 
 
         sort_order_option_text = ' '.join([f"-k{i+1},{i+1}{'n' if self.validated_headers[i] == self.time_dimension else ''}" for i in range(len(self.validated_headers[:-1]))])
@@ -396,17 +375,14 @@ class CsvRegionalTimeseriesVerificationService():
         )
         print("Validated file sorted")
 
-        self.delete_local_file(self.temp_validated_filepath)
-        print('Temporary validated file deleted')
-
 
         self.create_associated_parquet()
 
-        self.replace_file_content(self.temp_sorted_filepath, self.bucket_object_id)
+        replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
         print('File replaced')
 
         
-        s3_parquet_filename = f"{self.s3_filename}.parquet"
+        s3_parquet_filename = f"{self.filename[7:]}.parquet"
 
         if s3_parquet_filename.startswith("/"):
             s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[2:])
@@ -431,17 +407,11 @@ class CsvRegionalTimeseriesVerificationService():
 
 
         self.project_service.register_validation(
-            self.bucket_object_id,
+            replaced_bucket_object_id,
             self.dataset_template_id,
             self.validation_metadata,
             [uploaded_parquet_bucket_object_id]
         )
         print('Validation complete')
-
-        print(self.temp_sorted_filepath)
-        self.delete_local_file(self.temp_sorted_filepath)
-        print('Temporary sorted file deleted')
-        self.delete_local_file(f"{self.temp_sorted_filepath}.parquet")
-        print('Temporary parquet file deleted')
 
    

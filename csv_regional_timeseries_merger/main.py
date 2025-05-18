@@ -1,18 +1,23 @@
 import os
 from service import CSVRegionalTimeseriesMergeService 
 
-selected_filenames = os.environ.get('selecteted_filenames', '')
-selected_filenames = selected_filenames.split(',')
-selected_files_ids = os.environ.get('selected_files_ids', '')
-selected_files_ids = selected_files_ids.split(',')
+input_directory = 'inputs'
 
-print(f"_____________Merging following files: {selected_filenames} _____________")
+files = []
+for dirpath, dirnames, filenames in os.walk(input_directory):
+    for f in filenames:
+        if f != '.gitkeep':
+            full_path = os.path.join(dirpath, f)
+            relative_path = os.path.relpath(full_path, start=os.getcwd())
+            files.append(relative_path)
+
+print(f"_____________Merging following files: {files} _____________")
 
 merged_filename = os.environ['merged_filename']
-bucket_object_id_list = selected_files_ids
+
 csv_regional_timeseries_merge_service = CSVRegionalTimeseriesMergeService(
     filename=merged_filename,
-    bucket_object_id_list=bucket_object_id_list,
+    files=files,
     job_token=os.environ.get('ACC_JOB_TOKEN'),
 )
 csv_regional_timeseries_merge_service()

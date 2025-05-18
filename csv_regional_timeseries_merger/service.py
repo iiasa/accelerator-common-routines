@@ -12,7 +12,7 @@ class CSVRegionalTimeseriesMergeService:
         self,
         *,
         filename: str,
-        bucket_object_id_list: list[int],
+        files: list[int],
         job_token
     ):
         
@@ -30,7 +30,7 @@ class CSVRegionalTimeseriesMergeService:
 
         self.output_filename = filename
 
-        self.bucket_object_id_list = bucket_object_id_list
+        self.files = files
 
         self.temp_downloaded_filename = f"{uuid.uuid4().hex}.csv"
         # self.temp_merged_filename = f"{uuid.uuid4().hex}.csv"
@@ -184,13 +184,13 @@ class CSVRegionalTimeseriesMergeService:
         self.check_input_files()
 
 
-        first_downloaded_filepath = self.download_file(self.bucket_object_id_list[0])
+        first_downloaded_filepath = self.files[0]
 
-        for bucket_object_id in self.bucket_object_id_list[1:]:
+        for file in self.files[1:]:
 
             possible_line_breaks = self.get_possible_file_line_break(first_downloaded_filepath)
 
-            next_downloaded_filepath = self.download_file(bucket_object_id)
+            next_downloaded_filepath = file
 
             with open(first_downloaded_filepath, "ab") as merged_file:
                 with open(next_downloaded_filepath, 'rb') as being_merged_file:
@@ -209,8 +209,12 @@ class CSVRegionalTimeseriesMergeService:
                         merged_file.write(dat)
 
                 
-                self.delete_local_file(next_downloaded_filepath)
+                
         
+        if os.environ.get('MERGE_ONLY'):
+            print('Merge complete. Validation of merge not registered in server as MERGE_ONLY is set.')
+            return
+
         validation_metadata, dataset_template_id = self.get_merged_validated_metadata()
 
 
@@ -245,11 +249,6 @@ class CSVRegionalTimeseriesMergeService:
             [uploaded_parquet_bucket_object_id]
         )
         print('Merge complete')
-
-        self.delete_local_file(first_downloaded_filepath)
-        print('Temporary sorted file deleted')
-        self.delete_local_file(f"{first_downloaded_filepath}.parquet")
-        print('Temporary parquet file deleted')
 
 
           
