@@ -193,7 +193,7 @@ class CSVRegionalTimeseriesMergeService:
 
         with open(f"{first_downloaded_filepath}.parquet", "rb") as file_stream:
             uploaded_parquet_bucket_object_id = self.project_service.add_filestream_as_validation_supporter(
-                f"{self.output_filename}.parquet",
+                f"job-outputs/{os.environ['JOB_ID']}/{self.output_filename}.parquet",
                 file_stream,
             )
 
