@@ -4,6 +4,7 @@ import json
 import uuid
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pandas as pd
 from accli import AjobCliService
 
 
