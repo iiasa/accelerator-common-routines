@@ -30,7 +30,7 @@ class CSVRegionalTimeseriesMergeService:
 
         self.output_filename = filename
 
-        self.files = [file[7:] for file in files]
+        self.files = files
     
     def check_input_files(self):
         
@@ -38,12 +38,12 @@ class CSVRegionalTimeseriesMergeService:
             raise ValueError("Argument files should be at least two items.")
         
         first_file_type_id = self.project_service.get_filename_dataset_type(
-            self.files[0]
+            self.files[0][7:]
         )
         
         for file in self.files[1:]:
             other_file_type_id = self.project_service.get_filename_dataset_type(
-                file
+                file[7:]
             )
 
             if (first_file_type_id != None) and (first_file_type_id != other_file_type_id):
@@ -64,7 +64,7 @@ class CSVRegionalTimeseriesMergeService:
 
         
     def get_merged_validated_metadata(self):
-        first_validation_details = self.project_service.get_filename_validation_details(self.files[0])
+        first_validation_details = self.project_service.get_filename_validation_details(self.files[0][7:])
 
         dataset_template_details = self.project_service.get_dataset_template_details(first_validation_details['dataset_template_id'])
 
@@ -77,7 +77,7 @@ class CSVRegionalTimeseriesMergeService:
         first_validation_metadata = first_validation_details['validation_metadata']
 
         for file in self.files[1:]:
-            next_validation_metadata = self.project_service.get_filename_validation_details(file)['validation_metadata']
+            next_validation_metadata = self.project_service.get_filename_validation_details(file[7:])['validation_metadata']
 
             for key in first_validation_metadata:
 
