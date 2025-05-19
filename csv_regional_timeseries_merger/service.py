@@ -30,7 +30,7 @@ class CSVRegionalTimeseriesMergeService:
 
         self.output_filename = filename
 
-        self.files = files
+        self.files = [file[7:] for file in files]
     
     def check_input_files(self):
         
