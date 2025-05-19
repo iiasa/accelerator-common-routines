@@ -44,12 +44,12 @@ class CaseInsensitiveDict(dict):
         return super().setdefault(key.lower(), default)
 
 # Example usage:
-case_insensitive_dict = CaseInsensitiveDict({'A': 1, 'b': 2})
-print(case_insensitive_dict['a'])  # Output: 1
-print(case_insensitive_dict['B'])  # Output: 2
+# case_insensitive_dict = CaseInsensitiveDict({'A': 1, 'b': 2})
+# print(case_insensitive_dict['a'])  # Output: 1
+# print(case_insensitive_dict['B'])  # Output: 2
 
-case_insensitive_dict['C'] = 3
-print(case_insensitive_dict['c'])  # Output: 3
+# case_insensitive_dict['C'] = 3
+# print(case_insensitive_dict['c'])  # Output: 3
 
 
 def lower_rows(iterator):

@@ -31,63 +31,26 @@ class CSVRegionalTimeseriesMergeService:
         self.output_filename = filename
 
         self.files = files
-
-        self.temp_downloaded_filename = f"{uuid.uuid4().hex}.csv"
-        # self.temp_merged_filename = f"{uuid.uuid4().hex}.csv"
-        self.temp_dir = f"tmp_files"
-        
-        self.temp_downloaded_filepath = (
-            f"{self.temp_dir}/{self.temp_downloaded_filename}"
-        )
-        
-        # self.temp_merged_filepath = (
-        #     f"{self.temp_dir}/{self.temp_merged_filename}"
-        # )
-
     
     def check_input_files(self):
-        if not isinstance(self.bucket_object_id_list, list):
-            raise ValueError("Argument 'bucker_object_id_list' should be list.")
         
-        if len(self.bucket_object_id_list) < 2:
-            raise ValueError("Argument 'bucker_object_id_list' at least two items.")
+        if len(self.files) < 2:
+            raise ValueError("Argument files should be at least two items.")
         
-        first_file_type_id = self.project_service.get_bucket_object_validation_type(
-            self.bucket_object_id_list[0]
+        first_file_type_id = self.project_service.get_filename_dataset_type(
+            self.files[0]
         )
         
-        for bucket_object_id in self.bucket_object_id_list[1:]:
-            other_file_type_id = self.project_service.get_bucket_object_validation_type(
-                bucket_object_id
+        for file in self.files[1:]:
+            other_file_type_id = self.project_service.get_filename_dataset_type(
+                file
             )
 
-            if first_file_type_id != other_file_type_id:
+            if (first_file_type_id != None) and (first_file_type_id != other_file_type_id):
                 raise ValueError(
-                    "Arguments 'bucker_object_id_list' should be of same dataset template"
+                    f"Arguments 'bucker_object_id_list' should be of same dataset template of type {first_file_type_id}."
                 )
-            
-    def download_file(self, bucket_object_id):
-        print('Downloading file to validate.')
-        response = self.project_service.get_file_stream(
-            bucket_object_id
-        )
-
-        filepath = f"{self.temp_downloaded_filepath[:-5]}_{bucket_object_id}.csv" 
-
-        with open(filepath, "wb") as tmp_file:
-            for data in response.stream(amt=1024 * 1024):
-                size = tmp_file.write(data)
-
-        response.release_conn()
-        print('File download complete')
-
-        return filepath
            
-
-    
-    def delete_local_file(self, filepath):
-        if os.path.exists(filepath):
-            os.remove(filepath)
 
     def get_possible_file_line_break(self, filepath):
         breaks = []
@@ -101,7 +64,7 @@ class CSVRegionalTimeseriesMergeService:
 
         
     def get_merged_validated_metadata(self):
-        first_validation_details = self.project_service.get_bucket_object_validation_details(self.bucket_object_id_list[0])
+        first_validation_details = self.project_service.get_filename_validation_details(self.files[0])
 
         dataset_template_details = self.project_service.get_dataset_template_details(first_validation_details['dataset_template_id'])
 
@@ -113,16 +76,16 @@ class CSVRegionalTimeseriesMergeService:
 
         first_validation_metadata = first_validation_details['validation_metadata']
 
-        for bucket_object_id in self.bucket_object_id_list[1:]:
-            next_validation_metadata = self.project_service.get_bucket_object_validation_details(bucket_object_id)['validation_metadata']
+        for file in self.files[1:]:
+            next_validation_metadata = self.project_service.get_filename_validation_details(file)['validation_metadata']
 
             for key in first_validation_metadata:
 
                 if f"{time_dimension.lower()}_meta" not in first_validation_metadata:
-                    raise ValueError(f"Revalidate bucket object #{self.bucket_object_id_list[0]}")
+                    raise ValueError(f"Revalidate bucket object #{self.files[0]}")
 
                 if f"{time_dimension.lower()}_meta" not in next_validation_metadata:
-                    raise ValueError(f"Revalidate bucket object #{bucket_object_id}")
+                    raise ValueError(f"Revalidate bucket object #{file}")
 
                 if key.lower() == f"{time_dimension.lower()}_meta":
                     if next_validation_metadata[key.lower()]['min_value'] < first_validation_metadata[key.lower()]['min_value']:
@@ -182,7 +145,6 @@ class CSVRegionalTimeseriesMergeService:
 
     def __call__(self):
         self.check_input_files()
-
 
         first_downloaded_filepath = self.files[0]
 
