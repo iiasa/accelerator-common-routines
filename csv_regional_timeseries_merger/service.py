@@ -134,7 +134,7 @@ class CSVRegionalTimeseriesMergeService:
 
             if parquet_writer is None:
                 parquet_writer = pq.ParquetWriter(
-                    self.temp_validated_filepath + '.parquet',
+                    self.files[0] + '.parquet',
                     table.schema,
                     compression='snappy'
                 )
