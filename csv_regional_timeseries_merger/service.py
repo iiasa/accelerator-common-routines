@@ -70,6 +70,8 @@ class CSVRegionalTimeseriesMergeService:
 
         rules =  dataset_template_details.get('rules')
 
+        self.rules = rules
+
         self.template_rules = rules
         
         time_dimension = rules['root_schema_declarations']['time_dimension']
