@@ -8,8 +8,6 @@ from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError, SchemaError
 
 
-
-
 dataset_template_id = os.environ.get('dataset_template_id')
 
 project_service = AjobCliService(
@@ -26,9 +24,14 @@ metadata_schema =  dataset_template_details.get('rules')['root']
 
 input_directory = 'inputs'
 
-files = [f for f in os.listdir(input_directory)
-         if os.path.isfile(os.path.join(input_directory, f)) and f != '.gitkeep']
-
+files = []
+for dirpath, dirnames, filenames in os.walk(input_directory):
+    for f in filenames:
+        if f != '.gitkeep':
+            full_path = os.path.join(dirpath, f)
+            relative_path = os.path.relpath(full_path, start=os.getcwd())
+            files.append(relative_path)
+            
 for input_tif in files:
     with rasterio.open(input_tif) as src:
         # Get global metadata (for the entire file)
