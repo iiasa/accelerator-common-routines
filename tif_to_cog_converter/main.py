@@ -108,7 +108,7 @@ for input_tif in files:
 
             dst_profile.update({
                 "dtype": "float32",  # Use the correct data type
-                "nodata": 0,  # Ensure nodata is preserved
+                "nodata": src.nodata,  # Ensure nodata is preserved
                 "blockxsize": 128,
                 "blockysize": 128,
                 "TAGS": global_metadata,
@@ -120,7 +120,7 @@ for input_tif in files:
                 output_band_path,  # Output file path for this band
                 dst_profile,
                 indexes=[band_index],  # Process only the current band
-                nodata=0,  # Set the nodata value for this band
+                nodata=src.nodata,  # Set the nodata value for this band
                 config={
                     "GDAL_NUM_THREADS": "ALL_CPUS",  # Use all CPU cores for processing
                     "GDAL_TIFF_INTERNAL_MASK": True,  # Enable internal masks for transparency
