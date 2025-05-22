@@ -33,6 +33,7 @@ for dirpath, dirnames, filenames in os.walk(input_directory):
             files.append(relative_path)
             
 for input_tif in files:
+    print(f"_____________Validating and converting file: {input_tif}  to cloud optimized GeoTIFF_____________")
     with rasterio.open(input_tif) as src:
         # Get global metadata (for the entire file)
         global_metadata = src.tags()  # Global metadata for the whole file
@@ -42,9 +43,10 @@ for input_tif in files:
         global_unit = global_metadata.get('units', 'Not available')
         
         # Print global metadata
-        print("Global Metadata:")
-        print(f"  Variable: {global_variable}")
-        print(f"  Unit: {global_unit}")
+        print(">>> Global Metadata:")
+
+        print(global_metadata)
+
         print(f"Nodata: {src.nodata}")
 
 
@@ -82,7 +84,6 @@ for input_tif in files:
             
             global_metadata.update(band_metadata)
 
-            dst_profile.update_tags(global_metadata)
             
             # Prepare metadata for the band (can include global metadata if needed)
             # Here we use both global and band-specific metadata
@@ -96,6 +97,7 @@ for input_tif in files:
                 "nodata": 0,  # Ensure nodata is preserved
                 "blockxsize": 128,
                 "blockysize": 128,
+                "TAGS": global_metadata,
             })
             
             # Apply cog_translate to convert each band to COG
