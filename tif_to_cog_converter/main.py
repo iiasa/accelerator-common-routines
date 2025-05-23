@@ -52,7 +52,11 @@ for input_tif in files:
 
         
 
-        source_crs = src.crs or os.environ.get('INPUT_FILE_CRS')
+        source_crs = os.environ.get('INPUT_FILE_CRS')
+
+        if source_crs is None:
+            source_crs = src.crs
+        
         if source_crs is None:
             raise ValueError("CRS is neither in the file nor provided as an environment variable.")
 
