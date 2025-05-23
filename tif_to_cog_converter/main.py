@@ -68,13 +68,6 @@ for input_tif in files:
         # Check for 'variable' and 'unit' in the global metadata
         global_variable = global_metadata.get('variable', 'Not available')
         global_unit = global_metadata.get('units', 'Not available')
-        
-        # Print global metadata
-        print(">>> Global Metadata:")
-
-        print(global_metadata)
-
-        print(f"Nodata: {src.nodata}")
 
 
         try:
@@ -119,17 +112,20 @@ for input_tif in files:
             # Define output file path for the individual band COG
             output_band_path = f"outputs/band_{band_index}_output_cog.tif"
 
+            nodata_value = os.environ.get('INPUT_FILE_NODATA')
+            if nodata_value is not None:
+                nodata_value = float(nodata_value)
+            else:
+                nodata_value = src.nodata
+
             # Update the profile with CRS information
             dst_profile.update({
                 "dtype": "float32",  # Use the correct data type
-                "nodata": src.nodata,  # Ensure nodata is preserved
+                "nodata": nodata_value,  # Ensure nodata is preserved
                 "blockxsize": 128,
                 "blockysize": 128,
                 "crs": source_crs,  # Properly encode CRS in the GeoTIFF
             })
-
-
-            raise ValueError(f"This is noda data: {src.nodata}")
             
             # Apply cog_translate to convert each band to COG
             cog_translate(
@@ -137,7 +133,7 @@ for input_tif in files:
                 output_band_path,  # Output file path for this band
                 dst_profile,
                 indexes=[band_index],  # Process only the current band
-                nodata=src.nodata,  # Set the nodata value for this band
+                nodata=nodata_value,  # Set the nodata value for this band
                 config={
                     "GDAL_NUM_THREADS": "ALL_CPUS",  # Use all CPU cores for processing
                     "GDAL_TIFF_INTERNAL_MASK": True,  # Enable internal masks for transparency
@@ -172,5 +168,8 @@ for input_tif in files:
                 global_metadata,
                 []
             )
-            print('Merge complete')
+        
+    # Delete both input and output files
+    os.remove(input_tif)
+    os.remove(output_band_path)
 
