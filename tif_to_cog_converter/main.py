@@ -127,6 +127,9 @@ for input_tif in files:
                 "blockysize": 128,
                 "crs": source_crs,  # Properly encode CRS in the GeoTIFF
             })
+
+
+            raise ValueError(f"This is noda data: {src.nodata}")
             
             # Apply cog_translate to convert each band to COG
             cog_translate(
