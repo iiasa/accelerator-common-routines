@@ -49,6 +49,15 @@ for input_tif in files:
     print(f"_____________Validating and converting file: {input_tif}  to cloud optimized GeoTIFF_____________")
     
     with rasterio.open(input_tif) as src:
+
+        
+
+        source_crs = src.crs or os.environ.get('INPUT_FILE_CRS')
+        if source_crs is None:
+            raise ValueError("CRS is neither in the file nor provided as an environment variable.")
+
+
+
         # Get global metadata (for the entire file)
         global_metadata = src.tags()  # Global metadata for the whole file
         
@@ -106,12 +115,13 @@ for input_tif in files:
             # Define output file path for the individual band COG
             output_band_path = f"outputs/band_{band_index}_output_cog.tif"
 
+            # Update the profile with CRS information
             dst_profile.update({
                 "dtype": "float32",  # Use the correct data type
                 "nodata": src.nodata,  # Ensure nodata is preserved
                 "blockxsize": 128,
                 "blockysize": 128,
-                "TAGS": global_metadata,
+                "crs": source_crs,  # Properly encode CRS in the GeoTIFF
             })
             
             # Apply cog_translate to convert each band to COG
