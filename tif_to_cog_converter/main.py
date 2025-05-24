@@ -58,7 +58,7 @@ for input_tif in files:
         source_crs = os.environ.get('INPUT_FILE_CRS') 
 
         if source_crs is None:
-            source_crs = src.crs.to_string()
+            source_crs = src.crs.to_epsg()
         
         if source_crs is None:
             raise ValueError("CRS is neither in the file nor provided as an environment variable.")
