@@ -12,6 +12,10 @@ from rio_cogeo.profiles import cog_profiles
 from accli import AjobCliService
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError, SchemaError
+from rasterio.warp import reproject, Resampling, calculate_default_transform
+from rasterio.crs import CRS
+import numpy as np
+import tempfile
 
 
 # Restore if they were changed
@@ -90,25 +94,14 @@ for input_tif in files:
         num_bands = src.count
         print(f"\nNumber of bands in the input file: {num_bands}")
         
-        # Create COG profile (you can adjust compression and blocksize as needed)
-        dst_profile = cog_profiles.get("deflate")  # Use "deflate" compression for example
-
-        dst_profile.update(dict(BIGTIFF="IF_SAFER"))
+     
         
+        # Define the target CRS (Web Mercator)
+        target_crs = CRS.from_epsg(3857)  # EPSG:3857 for Web Mercator
+
         # Process each band
 
         for band_index in range(1, num_bands + 1):
-            
-            # Get metadata (tags) for the current band
-            band_metadata = src.tags(band_index)
-            
-            global_metadata.update(band_metadata)
-
-            
-            # Prepare metadata for the band (can include global metadata if needed)
-            # Here we use both global and band-specific metadata
-            
-            
             # Define output file path for the individual band COG
             output_band_path = f"outputs/band_{band_index}_output_cog.tif"
 
@@ -118,22 +111,85 @@ for input_tif in files:
             else:
                 nodata_value = src.nodata
 
-            # Update the profile with CRS information
+            dst_transform, width, height = calculate_default_transform(
+                    source_crs, target_crs, src.width, src.height, *src.bounds
+                )
+            temp_file_path = None
+
+            # Check if reprojection is required
+            if source_crs != target_crs:
+
+
+                # Allocate memory for the reprojected data
+                reprojected_data = src.read(band_index)
+                reprojected_array = np.empty_like(reprojected_data, dtype="float32")
+
+                # Reproject the data
+                reproject(
+                    source=reprojected_data,
+                    destination=reprojected_array,
+                    src_transform=src.transform,
+                    src_crs=source_crs,
+                    dst_transform=dst_transform,
+                    dst_crs=target_crs,
+                    resampling=Resampling.nearest,
+                )
+            
+            
+
+                # Apply cog_translate to convert each band to COG
+                # Use the reprojected array directly in cog_translate
+                with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as temp_file:
+                    temp_file_path = temp_file.name
+                    with rasterio.open(
+                        temp_file_path,
+                        "w",
+                        driver="GTiff",
+                        height=reprojected_array.shape[0],
+                        width=reprojected_array.shape[1],
+                        count=1,
+                        dtype="float32",
+                        crs=target_crs,
+                        transform=dst_transform,
+                        nodata=nodata_value,
+                    ) as temp_dst:
+                        temp_dst.write(reprojected_array, 1)
+                        temp_dst.update_tags(**global_metadata)
+                        temp_dst.update_tags(1, **src.tags(band_index))  # Add band-specific metadata
+
+
+               # Create COG profile (you can adjust compression and blocksize as needed)
+            dst_profile = cog_profiles.get("deflate")  # Use "deflate" compression for example
+
+            dst_profile.update(dict(BIGTIFF="IF_SAFER"))
+
             dst_profile.update({
+                "transform": dst_transform,
+                "width": width,
+                "height": height,
                 "dtype": "float32",  # Use the correct data type
-                "nodata": nodata_value,  # Ensure nodata is preserved
+                "nodata": nodata_value,  # Apply nodata value from variable
                 "blockxsize": 128,
                 "blockysize": 128,
-                "crs": source_crs,  # Properly encode CRS in the GeoTIFF
+                "crs": target_crs,  # Properly encode CRS in the GeoTIFF
+                # "TAGS": combined_metadata,  # Include both global and band-specific metadata
             })
-            
-            # Apply cog_translate to convert each band to COG
+
+            if temp_file_path:
+                
+                dst_profile.update({
+                    "transform": dst_transform,
+                    "width": width,
+                    "height": height
+                })
+
+            # Use the temporary file as input for cog_translate
             cog_translate(
-                input_tif,  # Source file
+                temp_file_path if temp_file_path else input_tif,  # Use the temporary file with reprojected data
                 output_band_path,  # Output file path for this band
                 dst_profile,
-                indexes=[band_index],  # Process only the current band
-                nodata=nodata_value,  # Set the nodata value for this band
+                indexes=[1],  # Process only the first band (reprojected data)
+                nodata=nodata_value,  # Explicitly set the nodata value for this band
                 config={
                     "GDAL_NUM_THREADS": "ALL_CPUS",  # Use all CPU cores for processing
                     "GDAL_TIFF_INTERNAL_MASK": True,  # Enable internal masks for transparency
@@ -141,9 +197,12 @@ for input_tif in files:
                 },
                 in_memory=False,  # Keep file processing on disk
                 quiet=False,  # Verbose output for debugging
+                forward_band_tags=True,  # ✅ Enables band metadata pass-through
+                metadata=global_metadata,
             )
-            
-            print(f"COG for band {band_index} saved as {output_band_path}")
+
+            # Clean up the temporary file
+            os.remove(temp_file_path)
 
 
             with open(output_band_path, "rb") as file_stream:
