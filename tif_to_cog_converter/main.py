@@ -76,7 +76,7 @@ for input_tif in files:
         variables_metadata = [src.tags(bi) for bi in range(1, total_bands + 1)]
     
     for band_index in range(1, total_bands + 1):
-        source_file_id = input_tif.split('.tif')[0]
+        source_file_id = '-'.join(input_tif.split('.tif')[0].split('/'))
         output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
 
         try:
@@ -164,5 +164,6 @@ for input_tif in files:
 
         if reprojected_raster_file:
             os.remove(reprojected_raster_file)
+            reprojected_raster_file = None
         os.remove(output_band_path)
 
