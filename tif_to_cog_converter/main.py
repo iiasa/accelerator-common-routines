@@ -76,7 +76,8 @@ for input_tif in files:
         variables_metadata = [src.tags(bi) for bi in range(1, total_bands + 1)]
     
     for band_index in range(1, total_bands + 1):
-        output_band_path = f"outputs/band_{band_index}_output_cog.tif"
+        source_file_id = input_tif.split('.tif')[0]
+        output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
 
         try:
             jsonschema_validate(
