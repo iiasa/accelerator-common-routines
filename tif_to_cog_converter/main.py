@@ -96,7 +96,8 @@ for input_tif in files:
             )
         
 
-        print(global_metadata, variables_metadata[band_index-1])
+        print(metadata_schema, global_metadata, variables_metadata[band_index-1])
+
         raise ValueError("wierdo")
         
         
