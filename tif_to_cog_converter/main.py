@@ -1,8 +1,8 @@
 import sys
 
-_original_stdin = sys.stdin
-_original_stdout = sys.stdout
-_original_stderr = sys.stderr
+# _original_stdin = sys.stdin
+# _original_stdout = sys.stdout
+# _original_stderr = sys.stderr
 
 import os
 import json
@@ -18,10 +18,10 @@ import numpy as np
 import tempfile
 
 
-# Restore if they were changed
-sys.stdin = _original_stdin
-sys.stdout = _original_stdout
-sys.stderr = _original_stderr
+# # Restore if they were changed
+# sys.stdin = _original_stdin
+# sys.stdout = _original_stdout
+# sys.stderr = _original_stderr
 
 
 dataset_template_id = os.environ.get('dataset_template_id')
