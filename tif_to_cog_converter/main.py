@@ -95,6 +95,9 @@ for input_tif in files:
                 f"Invalid data. Template id: {dataset_template_id}. Data: {str(validation_error)}. Original exception: {str(validation_error)}"
             )
         
+
+        raise ValueError(global_metadata)
+        
         
 
         reprojected_raster_file = None
@@ -130,7 +133,6 @@ for input_tif in files:
             "-of", "COG",
             "-co", "COMPRESS=LZW",
             "-co", "BIGTIFF=YES",
-            "-co", "ADD_OVERVIEWS=YES",
             "-co", "TILING_SCHEME=GoogleMapsCompatible"
         ]
 
