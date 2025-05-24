@@ -81,8 +81,8 @@ for input_tif in files:
 
         try:
             jsonschema_validate(
-                metadata_schema,
-                global_metadata
+                global_metadata,
+                metadata_schema
             )
 
         except SchemaError as schema_error:
@@ -90,16 +90,10 @@ for input_tif in files:
             raise ValueError(
                 f"Schema itself is not valid with template id. Template id: {dataset_template_id}. Original exception: {str(schema_error)}"
             )
-        except ValidationError as validation_error:
+        except  ValidationError as validation_error:
             raise ValueError(
                 f"Invalid data. Template id: {dataset_template_id}. Data: {str(validation_error)}. Original exception: {str(validation_error)}"
             )
-        
-
-        print(metadata_schema, global_metadata, variables_metadata[band_index-1])
-
-        raise ValueError("wierdo")
-        
         
 
         reprojected_raster_file = None
