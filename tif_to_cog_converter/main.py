@@ -161,3 +161,7 @@ for input_tif in files:
             []
         )
 
+        if reprojected_raster_file:
+            os.remove(reprojected_raster_file)
+        os.remove(output_band_path)
+
