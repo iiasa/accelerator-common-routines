@@ -174,9 +174,9 @@ class CSVRegionalTimeseriesMergeService:
                         merged_file.write(dat)
 
                 
-                
+        merge_only = True if os.environ.get('MERGE_ONLY') in ['True', 'true', '1', 'TRUE'] else False
         
-        if os.environ.get('MERGE_ONLY'):
+        if merge_only:
             print('Merge complete. Validation of merge not registered in server as MERGE_ONLY is set.')
             return
 

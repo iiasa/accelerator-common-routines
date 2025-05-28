@@ -355,8 +355,8 @@ class CsvRegionalTimeseriesVerificationService():
             print('Temporary validated file deleted')
             raise ValueError("Invalid data: Data not comply with template rules.")
         
-
-        if os.environ.get('VERIFY_ONLY'):
+        verify_only = True if os.environ.get('VERIFY_ONLY') in ['True', 'true', '1', 'TRUE'] else False
+        if verify_only:
             print('Validation complete. Validation not registered in server as VERIFY_ONLY is set.')
             return
 
