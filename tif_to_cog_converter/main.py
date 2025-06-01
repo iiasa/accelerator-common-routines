@@ -139,8 +139,7 @@ for input_tif in files:
         cog_cmd = [
             "gdal_translate",
             "-b", str(band_index),
-            "-srcnodata", f"{nodata_value}",
-            "-dstnodata", f"{nodata_value}",
+            "-a_nodata", f"{nodata_value}",
             "-a_srs", source_crs,
             cog_input,
             output_band_path,
