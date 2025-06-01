@@ -3,12 +3,12 @@ import sys
 import os
 import json
 import rasterio
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rio_cogeo.cogeo import cog_translate
 from rio_cogeo.profiles import cog_profiles
 from accli import AjobCliService
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError, SchemaError
-from rasterio.warp import reproject, Resampling, calculate_default_transform
 from rasterio.crs import CRS
 import numpy as np
 import tempfile
@@ -50,6 +50,9 @@ for input_tif in files:
     target_crs = 'EPSG:3857'
     global_metadata = {}
     variables_metadata = []
+
+    source_file_id = '-'.join(input_tif.split('.tif')[0].split('/')) 
+    reprojected_raster_file = None
     
     print(f"_____________Validating and converting file: {input_tif}  to cloud optimized GeoTIFF_____________")
     
@@ -75,29 +78,39 @@ for input_tif in files:
         global_metadata = src.tags()
         variables_metadata = [src.tags(bi) for bi in range(1, total_bands + 1)]
 
-    source_file_id = '-'.join(input_tif.split('.tif')[0].split('/'))
+
+
+        if source_crs != target_crs:
+
+            reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
     
-    reprojected_raster_file = None
+            transform, width, height = calculate_default_transform(
+                source_crs, target_crs, src.width, src.height, *src.bounds
+            )
 
-    # if source_crs != target_crs:
+            kwargs = src.meta.copy()
+            kwargs.update({
+                'crs': target_crs,
+                'transform': transform,
+                'width': width,
+                'height': height,
+                'compress': 'LZW', # Optional: Add compression to the temporary file
+                'tiled': True       # Optional: Write temporary file as tiled
+            })
 
-    #     reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
-    #     command = [
-    #         "gdalwarp",
-    #         "-s_srs", source_crs,
-    #         "-t_srs", target_crs,
-    #         "-r", "near",              # optional: resampling method
-    #         "-overwrite",                  # optional: overwrite output
-    #         input_tif,
-    #         reprojected_raster_file
-    #     ]
+            
 
-    #     try:
-    #         subprocess.run(command, check=True)
-    #         print("Reprojection successful.")
-    #     except subprocess.CalledProcessError as e:
-    #         print("Error during reprojection:", e)
-
+            with rasterio.open(reprojected_raster_file, 'w', **kwargs) as dst:
+                for i in range(1, src.count + 1):
+                    reproject(
+                        source=rasterio.band(src, i),
+                        destination=rasterio.band(dst, i),
+                        src_transform=src.transform,
+                        src_crs=src.crs,
+                        dst_transform=transform,
+                        dst_crs=target_crs,
+                        resampling=Resampling.nearest
+                    )
     
     for band_index in range(1, total_bands + 1):
         
@@ -130,12 +143,12 @@ for input_tif in files:
             "nodata": nodata_value,  # Ensure nodata is preserved
             "blockxsize": 128,
             "blockysize": 128,
-            "crs": source_crs,  # Properly encode CRS in the GeoTIFF
+            "crs": target_crs,  # Properly encode CRS in the GeoTIFF
             "BIGTIFF":"IF_SAFER"
         })
 
         cog_translate(
-            input_tif,
+            cog_input,
             output_band_path,
             dst_profile,
             indexes=[band_index],  # Process only the current band
@@ -149,9 +162,6 @@ for input_tif in files:
             quiet=False,
             forward_band_tags=True
         )
-
-
-        
 
         with open(output_band_path, "rb") as file_stream:
             uploaded_bucket_object_id = project_service.add_filestream_as_job_output(
