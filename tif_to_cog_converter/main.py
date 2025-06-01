@@ -147,8 +147,7 @@ for input_tif in files:
             },
             in_memory=False,  # Keep file processing on disk
             quiet=False,
-            forward_band_tags=True,
-            progress_out=sys.stdin
+            forward_band_tags=True
         )
 
 
