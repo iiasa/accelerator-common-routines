@@ -122,38 +122,34 @@ for input_tif in files:
 
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
-        # cog_cmd = [
-        #     "gdal_translate",
-        #     "-b", str(band_index),
-        #     "-a_nodata", f"{nodata_value}",
-        #     "-a_srs", source_crs,
-        #     cog_input,
-        #     output_band_path,
-        #     "-of", "COG",
-        #     "-co", "COMPRESS=LZW",
-        #     "-co", "BIGTIFF=YES",
-        #     "-co", "STATISTICS=YES",
-        #     "-co", "TILING_SCHEME=GoogleMapsCompatible"
-        # ]
+        dst_profile = cog_profiles.get("deflate")
 
-        cog_cmd = [
-            "gdal_translate",
-            "-b", str(band_index),
-            "-a_nodata", f"{nodata_value}",
-            "-a_srs", source_crs,
-            cog_input,
+
+        dst_profile.update({
+            "dtype": "float32",  # Use the correct data type
+            "nodata": nodata_value,  # Ensure nodata is preserved
+            "blockxsize": 128,
+            "blockysize": 128,
+            "crs": source_crs,  # Properly encode CRS in the GeoTIFF
+            "BIGTIFF":"IF_SAFER"
+        })
+
+        cog_translate(
+            input_tif,
             output_band_path,
-            "-of", "COG",
-            "-co", "COMPRESS=LZW",
-            "-co", "BIGTIFF=YES",
-            "-co", "STATISTICS=YES",
-            "-co", "TILING_SCHEME=GoogleMapsCompatible",
-            "-co", "SPARSE_OK=FALSE",
-            "-co", "COPY_SRC_OVERVIEWS=YES"
-        ]
-
-        # Run COG conversion
-        subprocess.run(cog_cmd, check=True)
+            dst_profile,
+            indexes=[band_index],  # Process only the current band
+            nodata=nodata_value,  # Set the nodata value for this band
+            config={
+                "GDAL_NUM_THREADS": "ALL_CPUS",  # Use all CPU cores for processing
+                "GDAL_TIFF_INTERNAL_MASK": True,  # Enable internal masks for transparency
+                "GDAL_TIFF_OVR_BLOCKSIZE": "128",  # Block size for overviews
+            },
+            in_memory=False,  # Keep file processing on disk
+            quiet=False,
+            forward_band_tags=True,
+            progress_out=sys.stdin
+        )
 
 
         
