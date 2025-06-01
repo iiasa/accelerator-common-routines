@@ -126,7 +126,7 @@ for input_tif in files:
             "gdal_translate",
             "-b", str(band_index),
             "-a_nodata", f"{nodata_value}",
-            "-a_crs", source_crs,
+            "-a_srs", source_crs,
             cog_input,
             output_band_path,
             "-of", "COG",
