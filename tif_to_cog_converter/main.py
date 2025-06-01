@@ -122,10 +122,25 @@ for input_tif in files:
 
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
+        # cog_cmd = [
+        #     "gdal_translate",
+        #     "-b", str(band_index),
+        #     "-a_nodata", f"{nodata_value}",
+        #     "-a_srs", source_crs,
+        #     cog_input,
+        #     output_band_path,
+        #     "-of", "COG",
+        #     "-co", "COMPRESS=LZW",
+        #     "-co", "BIGTIFF=YES",
+        #     "-co", "STATISTICS=YES",
+        #     "-co", "TILING_SCHEME=GoogleMapsCompatible"
+        # ]
+
         cog_cmd = [
             "gdal_translate",
             "-b", str(band_index),
-            "-a_nodata", f"{nodata_value}",
+            "-srcnodata", f"{nodata_value}",
+            "-dstnodata", f"{nodata_value}",
             "-a_srs", source_crs,
             cog_input,
             output_band_path,
@@ -133,7 +148,9 @@ for input_tif in files:
             "-co", "COMPRESS=LZW",
             "-co", "BIGTIFF=YES",
             "-co", "STATISTICS=YES",
-            "-co", "TILING_SCHEME=GoogleMapsCompatible"
+            "-co", "TILING_SCHEME=GoogleMapsCompatible",
+            "-co", "SPARSE_OK=FALSE",
+            "-co", "COPY_SRC_OVERVIEWS=YES"
         ]
 
         # Run COG conversion
