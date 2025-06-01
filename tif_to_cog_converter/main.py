@@ -106,7 +106,7 @@ for input_tif in files:
                         source=rasterio.band(src, i),
                         destination=rasterio.band(dst, i),
                         src_transform=src.transform,
-                        src_crs=src.crs,
+                        src_crs=source_crs,
                         dst_transform=transform,
                         dst_crs=target_crs,
                         resampling=Resampling.nearest
