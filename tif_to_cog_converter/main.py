@@ -74,9 +74,32 @@ for input_tif in files:
 
         global_metadata = src.tags()
         variables_metadata = [src.tags(bi) for bi in range(1, total_bands + 1)]
+
+    source_file_id = '-'.join(input_tif.split('.tif')[0].split('/'))
+    reprojected_raster_file = None
+
+    if source_crs != target_crs:
+
+        reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
+        command = [
+            "gdalwarp",
+            "-s_srs", source_crs,
+            "-t_srs", target_crs,
+            "-r", "near",              # optional: resampling method
+            "-overwrite",                  # optional: overwrite output
+            input_tif,
+            reprojected_raster_file
+        ]
+
+        try:
+            subprocess.run(command, check=True)
+            print("Reprojection successful.")
+        except subprocess.CalledProcessError as e:
+            print("Error during reprojection:", e)
+
     
     for band_index in range(1, total_bands + 1):
-        source_file_id = '-'.join(input_tif.split('.tif')[0].split('/'))
+        
         output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
 
         try:
@@ -96,39 +119,18 @@ for input_tif in files:
             )
         
 
-        reprojected_raster_file = None
-
-        if source_crs != target_crs:
-
-            reprojected_raster_file = f"outputs/band_{band_index}_reprojected.tif"
-            command = [
-                "gdalwarp",
-                "-s_srs", source_crs,
-                "-t_srs", target_crs,
-                "-r", "bilinear",              # optional: resampling method
-                "-overwrite",                  # optional: overwrite output
-                input_tif,
-                reprojected_raster_file
-            ]
-
-            try:
-                subprocess.run(command, check=True)
-                print("Reprojection successful.")
-            except subprocess.CalledProcessError as e:
-                print("Error during reprojection:", e)
-
-
-
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
         cog_cmd = [
             "gdal_translate",
+            "-b", str(band_index),
             "-a_nodata", f"{nodata_value}",
             cog_input,
             output_band_path,
             "-of", "COG",
             "-co", "COMPRESS=LZW",
             "-co", "BIGTIFF=YES",
+            "-co", "STATISTICS=YES",
             "-co", "TILING_SCHEME=GoogleMapsCompatible"
         ]
 
@@ -160,8 +162,10 @@ for input_tif in files:
             []
         )
 
-        if reprojected_raster_file:
-            os.remove(reprojected_raster_file)
-            reprojected_raster_file = None
         os.remove(output_band_path)
+
+    if reprojected_raster_file:
+        os.remove(reprojected_raster_file)
+        reprojected_raster_file = None
+    
 
