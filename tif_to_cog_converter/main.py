@@ -80,6 +80,8 @@ for input_tif in files:
 
     if source_crs != target_crs:
 
+        continue
+
         reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
         command = [
             "gdalwarp",
@@ -125,6 +127,7 @@ for input_tif in files:
             "gdal_translate",
             "-b", str(band_index),
             "-a_nodata", f"{nodata_value}",
+            "-a_crs", source_crs,
             cog_input,
             output_band_path,
             "-of", "COG",
