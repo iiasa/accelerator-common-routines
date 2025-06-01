@@ -76,28 +76,27 @@ for input_tif in files:
         variables_metadata = [src.tags(bi) for bi in range(1, total_bands + 1)]
 
     source_file_id = '-'.join(input_tif.split('.tif')[0].split('/'))
+    
     reprojected_raster_file = None
 
-    if source_crs != target_crs:
+    # if source_crs != target_crs:
 
-        continue
+    #     reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
+    #     command = [
+    #         "gdalwarp",
+    #         "-s_srs", source_crs,
+    #         "-t_srs", target_crs,
+    #         "-r", "near",              # optional: resampling method
+    #         "-overwrite",                  # optional: overwrite output
+    #         input_tif,
+    #         reprojected_raster_file
+    #     ]
 
-        reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
-        command = [
-            "gdalwarp",
-            "-s_srs", source_crs,
-            "-t_srs", target_crs,
-            "-r", "near",              # optional: resampling method
-            "-overwrite",                  # optional: overwrite output
-            input_tif,
-            reprojected_raster_file
-        ]
-
-        try:
-            subprocess.run(command, check=True)
-            print("Reprojection successful.")
-        except subprocess.CalledProcessError as e:
-            print("Error during reprojection:", e)
+    #     try:
+    #         subprocess.run(command, check=True)
+    #         print("Reprojection successful.")
+    #     except subprocess.CalledProcessError as e:
+    #         print("Error during reprojection:", e)
 
     
     for band_index in range(1, total_bands + 1):
