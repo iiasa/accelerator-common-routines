@@ -14,19 +14,63 @@ import numpy as np
 import tempfile
 import subprocess
 
-
+DEVELOPMENT = os.environ.get('DEVELOPMENT', None)
 
 dataset_template_id = os.environ.get('dataset_template_id')
 
-project_service = AjobCliService(
-    os.environ.get('ACC_JOB_TOKEN'),
-    server_url=os.environ.get('ACC_JOB_GATEWAY_SERVER'),
-    verify_cert=False
-)
 
+def get_project_service():
 
-dataset_template_details = project_service.get_dataset_template_details(dataset_template_id)
-metadata_schema =  dataset_template_details.get('rules')['root']
+    project_service = AjobCliService(
+        os.environ.get('ACC_JOB_TOKEN'),
+        server_url=os.environ.get('ACC_JOB_GATEWAY_SERVER'),
+        verify_cert=False
+    )
+
+    return project_service
+
+def get_metadata_schema():
+
+    if DEVELOPMENT:
+        return {
+                "type": "object",
+                "required": [],
+                "properties": {},
+                "additionalProperties": True
+            }
+
+    ps = get_project_service()
+    dataset_template_details = ps.get_dataset_template_details(dataset_template_id)
+    metadata_schema =  dataset_template_details.get('rules')['root']
+
+    return metadata_schema
+
+def upload_and_register_output(output_band_path, global_metadata):
+
+    if DEVELOPMENT:
+        return
+
+    ps = get_project_service()
+    with open(output_band_path, "rb") as file_stream:
+        uploaded_bucket_object_id = ps.add_filestream_as_job_output(
+            output_band_path,
+            file_stream,
+        )
+
+        # Monkey patch serializer
+        def monkey_patched_json_encoder_default(encoder, obj):
+            if isinstance(obj, set):
+                return list(obj)
+            return json.JSONEncoder.default(encoder, obj)
+
+        json.JSONEncoder.default = monkey_patched_json_encoder_default
+        
+        ps.register_validation(
+            uploaded_bucket_object_id,
+            dataset_template_id,
+            global_metadata,
+            []
+        )
 
 
 
@@ -99,11 +143,12 @@ for input_tif in files:
             })
 
             
-
+            
             with rasterio.open(reprojected_raster_file, 'w', **kwargs) as dst:
                 for i in range(1, src.count + 1):
+                    data = src.read(i)
                     reproject(
-                        source=rasterio.band(src, i),
+                        source=data,
                         destination=rasterio.band(dst, i),
                         src_transform=src.transform,
                         src_crs=source_crs,
@@ -119,7 +164,7 @@ for input_tif in files:
         try:
             jsonschema_validate(
                 global_metadata,
-                metadata_schema
+                get_metadata_schema()
             )
 
         except SchemaError as schema_error:
@@ -139,11 +184,11 @@ for input_tif in files:
 
 
         dst_profile.update({
-            "dtype": "float32",  # Use the correct data type
-            "nodata": nodata_value,  # Ensure nodata is preserved
+            "dtype": "float32",
+            "nodata": nodata_value,
             "blockxsize": 128,
             "blockysize": 128,
-            "crs": target_crs,  # Properly encode CRS in the GeoTIFF
+            "crs": target_crs,
             "BIGTIFF":"IF_SAFER"
         })
 
@@ -151,43 +196,24 @@ for input_tif in files:
             cog_input,
             output_band_path,
             dst_profile,
-            indexes=[band_index],  # Process only the current band
-            nodata=nodata_value,  # Set the nodata value for this band
+            indexes=[band_index],
+            nodata=nodata_value,
             config={
-                "GDAL_NUM_THREADS": "ALL_CPUS",  # Use all CPU cores for processing
-                "GDAL_TIFF_INTERNAL_MASK": True,  # Enable internal masks for transparency
-                "GDAL_TIFF_OVR_BLOCKSIZE": "128",  # Block size for overviews
+                "GDAL_NUM_THREADS": "ALL_CPUS",
+                "GDAL_TIFF_INTERNAL_MASK": True,
+                "GDAL_TIFF_OVR_BLOCKSIZE": "128",
             },
-            in_memory=False,  # Keep file processing on disk
+            in_memory=False,
             quiet=False,
             forward_band_tags=True
         )
 
-        with open(output_band_path, "rb") as file_stream:
-            uploaded_bucket_object_id = project_service.add_filestream_as_job_output(
-                output_band_path,
-                file_stream,
-            )
+        upload_and_register_output(output_band_path, global_metadata)        
 
-        # Monkey patch serializer
-        def monkey_patched_json_encoder_default(encoder, obj):
-            if isinstance(obj, set):
-                return list(obj)
-            return json.JSONEncoder.default(encoder, obj)
+        if not DEVELOPMENT:
+            os.remove(output_band_path)
 
-        json.JSONEncoder.default = monkey_patched_json_encoder_default
-        
-        
-        project_service.register_validation(
-            uploaded_bucket_object_id,
-            dataset_template_id,
-            global_metadata,
-            []
-        )
-
-        os.remove(output_band_path)
-
-    if reprojected_raster_file:
+    if reprojected_raster_file and (not DEVELOPMENT):
         os.remove(reprojected_raster_file)
         reprojected_raster_file = None
     
