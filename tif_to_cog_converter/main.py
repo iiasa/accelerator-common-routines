@@ -156,7 +156,19 @@ for input_tif in files:
                         dst_crs=target_crs,
                         resampling=Resampling.nearest
                     )
-    
+
+                    dst.set_band_description(i, src.descriptions[i - 1])
+
+                    if src.units:
+                        dst.set_band_unit(i, src.units[i - 1])
+                    
+                    # Fix: Ensure band tags are strings
+                    dst.update_tags(i, **{k: str(v) for k, v in src.tags(i).items()})
+
+                # Fix: Ensure dataset-level tags are strings
+                dst.update_tags(**{k: str(v) for k, v in src.tags().items()})
+
+        
     for band_index in range(1, total_bands + 1):
         
         output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
