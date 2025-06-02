@@ -225,8 +225,9 @@ for input_tif in files:
         if not DEVELOPMENT:
             os.remove(output_band_path)
 
-    if reprojected_raster_file and (not DEVELOPMENT):
-        os.remove(reprojected_raster_file)
+    if reprojected_raster_file:
         reprojected_raster_file = None
+        if (not DEVELOPMENT):
+            os.remove(reprojected_raster_file)
     
 
