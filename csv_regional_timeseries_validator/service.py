@@ -315,7 +315,9 @@ class CsvRegionalTimeseriesVerificationService():
 
         for i, chunk in enumerate(pd.read_csv(self.temp_sorted_filepath, chunksize=chunksize)):
             if self.value_dimension in chunk.columns:
-                chunk[self.value_dimension] = chunk[self.value_dimension].astype('float32')
+                chunk[self.value_dimension] = pd.to_numeric(
+                    chunk[self.value_dimension], errors='coerce'
+                ).astype('float32')
 
             if self.time_dimension in chunk.columns:
                chunk[self.time_dimension] = chunk[self.time_dimension].astype('int32')
