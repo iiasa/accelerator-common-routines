@@ -54,7 +54,7 @@ def pull_dvc_data(repo_path):
 def add_new_files(repo_path):
     
 
-    run_command(['rsync', '-avh', '/app/workdir/newfiles/', f"{repo_path}/{repo_data_folder}"], cwd=repo_path)
+    run_command(['rsync', '-avh', '/code/workdir/newfiles/', f"{repo_path}/{repo_data_folder}"], cwd=repo_path)
     for root, dirs, files in os.walk(f"{repo_path}/{repo_data_folder}"):
         for file in files:
             file_path = os.path.join(root, file)
@@ -74,10 +74,10 @@ def main():
     repo_url = inject_pat_into_url(repo_url, pat_token)
 
     # Main operations
-    clone_git_repo(repo_url, destination='/app/workdir/repo')
-    configure_dvc_s3_remote('/app/workdir/repo')
+    clone_git_repo(repo_url, destination='/code/workdir/repo')
+    configure_dvc_s3_remote('/code/workdir/repo')
     # pull_dvc_data(repo_name)
-    add_new_files('/app/workdir/repo')
+    add_new_files('/code/workdir/repo')
 
 if __name__ == "__main__":
     main()

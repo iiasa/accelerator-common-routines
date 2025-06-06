@@ -1,10 +1,10 @@
 FROM python:3.10.4
 
-COPY ./csv_regional_timeseries_validator/requirements.txt /app/requirements.txt
+COPY ./csv_regional_timeseries_validator/requirements.txt /code/requirements.txt
 
-RUN pip install -r /app/requirements.txt
+RUN pip install -r /code/requirements.txt
 
-COPY ./csv_regional_timeseries_validator/ /app
+COPY ./csv_regional_timeseries_validator/ /code
 
-WORKDIR /app
+WORKDIR /code
 
