@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import csv
 import uuid
@@ -129,8 +130,45 @@ class CsvRegionalTimeseriesVerificationService():
         self.region_dimension = self.rules['root_schema_declarations']['region_dimension']
 
 
+    def preprocess_row(self, row, schema):
+        """ Temporary row to validate array represented as string"""
+        for field, rules in schema.get("properties", {}).items():
+            if rules.get("type") == "array":
+                splitter = rules.get("x-split")
+                
+                # Enforce: if 'x-split' exists, items must be strings
+                if splitter:
+                    item_type = rules.get("items", {}).get("type")
+                    if item_type != "string":
+                        raise ValueError(
+                            f"Field '{field}' uses x-split but its items are not strings (found: {item_type})"
+                        )
+                    # Apply splitting
+                    row[field] = row[field].split(splitter) if row.get(field) else []
+                else:
+                    raise ValueError(
+                        f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
+        )
+        return row
+    
+    def get_value_from__mapping_pointers(self, pointer_array, root_schema, row):
+        value = None
+        for pointer in pointer_array:
+            if pointer.startswith('&'):
+                value = root_schema[pointer[1:]]
+            elif pointer.startswith('{') and pointer.endswith('}'):
+                if value:
+                    value = value[row[pointer[1:-1]]]
+                else:
+                    value = row[pointer[1:-1]]
+
+            else:
+                value = value[pointer]
+        return value
+    
     def validate_row_data(self, row):
         row = CaseInsensitiveDict(row)
+        validation_row = self.preprocess_row(row.copy(), self.rules['root'])
         try:
             jsonschema_validate(
                 self.rules.get('root'),
@@ -149,6 +187,10 @@ class CsvRegionalTimeseriesVerificationService():
         
 
         for key in self.rules['root']['properties']:
+
+            # TODO we will remote this whole block of metadata preparation thing.
+            if self.rules['root']['properties'][key]['type'] == 'array':
+                continue
 
             if key in [self.variable_dimension, self.unit_dimension]:
                 continue
@@ -206,32 +248,46 @@ class CsvRegionalTimeseriesVerificationService():
 
                 for condition in condition_object.keys():
                 
-                    rhs_value_pointer = condition_object[condition]
-
-                    rhs = None
-                    for pointer in rhs_value_pointer:
-                        if pointer.startswith('&'):
-                            rhs = self.rules[pointer[1:]]
-                        elif pointer.startswith('{') and pointer.endswith('}'):
-                            rhs = rhs[row[pointer[1:-1]]]
-
-                        else:
-                            rhs = rhs[pointer]
-
-
-                    if condition == 'value_equals':
-                        if lhs != rhs:
-                            raise ValueError(
-                                f'{lhs} in {row_key} column must be equal to {rhs}.'
-                            )
+                    if condition in ['value_equals', 'is_subset_of_map']:
                     
-                    if condition == 'is_subset_of_map':
-                        if not lhs in rhs:
-                            raise ValueError(
-                                f'{lhs} in {row_key} column must be member of {rhs}.'
-                            )
+                        rhs_value_pointer = condition_object[condition]
 
-        return row          
+                        rhs = self.get_value_from__mapping_pointers(rhs_value_pointer, self.rules, validation_row)
+
+                        if condition == 'value_equals':
+                            if lhs != rhs:
+                                raise ValueError(
+                                    f'{lhs} in {row_key} column must be equal to {rhs}.'
+                                )
+                        
+                        if condition == 'is_subset_of_map':
+                            if not lhs in rhs:
+                                raise ValueError(
+                                    f'{lhs} in {row_key} column must be member of {rhs}.'
+                                )
+                        
+                    elif condition == 'regex':
+                        directive = condition_object[condition]
+
+                        regexf = directive['regexf']
+                        fcontext = directive["fcontext"]
+
+                        resolved_fcontext = {"lhs": lhs}
+
+                        for key in fcontext:
+                            key_pointer = fcontext[key]
+
+                            print(f"Resolving key: {key} with pointer: {key_pointer}")
+
+                            resolved_fcontext[key] = self.get_value_from__mapping_pointers(key_pointer, self.rules, validation_row)
+                        
+                        pattern = regexf.format(**resolved_fcontext)
+
+                        if not re.match(pattern, lhs.strip()):
+                            raise ValueError(f"Value {lhs}  did not match pattern {pattern}")
+
+
+        return validation_row          
     def get_validated_rows(self):
         with open(self.filename) as csvfile:
             reader = csv.DictReader(
@@ -290,6 +346,8 @@ class CsvRegionalTimeseriesVerificationService():
             
             validated_rows = self.get_validated_rows()
 
+            self.create_associated_parquet(validated_rows)
+
             for row in validated_rows:
             
                 writer.writerow(row)
@@ -308,38 +366,72 @@ class CsvRegionalTimeseriesVerificationService():
         if os.path.exists(filepath):
             os.remove(filepath)
 
-    def create_associated_parquet(self):
+    def create_associated_parquet(self, rows):
+        chunk = []
+        rows_written = 0
         chunksize = 100_000
-
         parquet_writer = None
 
-        for i, chunk in enumerate(pd.read_csv(self.temp_sorted_filepath, chunksize=chunksize)):
-            if self.value_dimension in chunk.columns:
-                chunk[self.value_dimension] = pd.to_numeric(
-                    chunk[self.value_dimension], errors='coerce'
-                ).astype('float32')
+        for row in rows:
+            chunk.append(row)
+            if len(chunk) >= chunksize:
+                df = pd.DataFrame(chunk)
+                df = self._process_dataframe(df)  # defined below
+                table = self._convert_to_arrow_table(df)
+                
+                if parquet_writer is None:
+                    parquet_writer = pq.ParquetWriter(
+                        self.temp_sorted_filepath + '.parquet',
+                        table.schema,
+                        compression='snappy'
+                    )
+                parquet_writer.write_table(table)
+                rows_written += len(chunk)
+                chunk = []
 
-            if self.time_dimension in chunk.columns:
-               chunk[self.time_dimension] = chunk[self.time_dimension].astype('int32')
-
-            for col in chunk.columns:
-                if col != self.value_dimension:
-                    chunk[col] = chunk[col].astype('category')
-
-            table = pa.Table.from_pandas(chunk, preserve_index=False)
-
+        if chunk:
+            df = pd.DataFrame(chunk)
+            df = self._process_dataframe(df)
+            table = self._convert_to_arrow_table(df)
             if parquet_writer is None:
                 parquet_writer = pq.ParquetWriter(
                     self.temp_sorted_filepath + '.parquet',
                     table.schema,
                     compression='snappy'
                 )
-
             parquet_writer.write_table(table)
+            rows_written += len(chunk)
 
-        # Finalize writer
         if parquet_writer:
             parquet_writer.close()
+        print(f"✅ Total rows written: {rows_written}")
+
+    def _process_dataframe(self, df):
+        for col in df.columns:
+            if col == self.value_dimension:
+                df[col] = df[col].astype('float32')
+            elif df[col].apply(lambda x: isinstance(x, list)).all():
+                # Leave list columns as-is
+                continue
+            elif df[col].dtype == object:
+                df[col] = df[col].astype('category')
+        return df
+
+    def _convert_to_arrow_table(self, df):
+        arrays = {}
+        for col in df.columns:
+            first_val = next((x for x in df[col] if x is not None), None)
+            if isinstance(first_val, list):
+                arrays[col] = pa.array(df[col], type=pa.list_(pa.string()))
+            elif col == self.value_dimension:
+                arrays[col] = pa.array(df[col], type=pa.float32())
+            else:
+                arrays[col] = pa.array(df[col])
+        return pa.Table.from_arrays(
+            list(arrays.values()), 
+            names=list(arrays.keys())
+        )
+    
                 
     def __call__(self):
         self.set_csv_regional_validation_rules()
@@ -377,8 +469,6 @@ class CsvRegionalTimeseriesVerificationService():
         )
         print("Validated file sorted")
 
-
-        self.create_associated_parquet()
 
         replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
         print('File replaced')
