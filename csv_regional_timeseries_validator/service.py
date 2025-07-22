@@ -217,7 +217,11 @@ class CsvRegionalTimeseriesVerificationService():
             map_documents = self.get_map_documents(key)
 
             if map_documents:
-                if row[key] not in map_documents:
+                if type(row[key]) == list:
+                    for item in row[key]:
+                        if item not in map_documents:
+                            raise ValueError(f"'{item}' must be one of {map_documents.keys()}" )
+                elif row[key] not in map_documents:
                     raise ValueError(f"'{row[key]}' must be one of {map_documents.keys()}" )
                 
         
