@@ -350,9 +350,9 @@ class CsvRegionalTimeseriesVerificationService():
             
             validated_rows = self.get_validated_rows()
 
-            self.create_associated_parquet(validated_rows)
+            passed_rows = self.create_associated_parquet(validated_rows)
 
-            for row in validated_rows:
+            for row in passed_rows:
             
                 writer.writerow(row)
         
@@ -392,6 +392,8 @@ class CsvRegionalTimeseriesVerificationService():
                 parquet_writer.write_table(table)
                 rows_written += len(chunk)
                 chunk = []
+
+            yield row
 
         if chunk:
             df = pd.DataFrame(chunk)

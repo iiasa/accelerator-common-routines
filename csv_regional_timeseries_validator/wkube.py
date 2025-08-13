@@ -40,8 +40,8 @@ for input in args:
         conf={
             "dataset_template_id": 4,
             "VERIFY_ONLY":'True',
-            "input_mappings": "acc://forestnav/pathway/pathway_sample.csv:/code/inputs/input.csv;/mnt/pipe/inputs/:/code/inputs/",
-            "output_mappings": "/mnt/pipe/inputs/:/mnt/graph/outputs/"
+            "input_mappings": "acc://forestnav/pathway/pathway_sample.csv:/code/inputs/input.csv;/mnt/data/inputs/:/code/inputs/",
+            "output_mappings": "/mnt/data/inputs/:/mnt/graph/outputs/"
         }
     )
 
