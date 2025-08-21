@@ -16,9 +16,6 @@ import subprocess
 
 DEVELOPMENT = os.environ.get('DEVELOPMENT', None)
 
-dataset_template_id = os.environ.get('dataset_template_id')
-
-
 def get_project_service():
 
     project_service = AjobCliService(
@@ -29,23 +26,7 @@ def get_project_service():
 
     return project_service
 
-def get_metadata_schema():
-
-    if DEVELOPMENT:
-        return {
-                "type": "object",
-                "required": [],
-                "properties": {},
-                "additionalProperties": True
-            }
-
-    ps = get_project_service()
-    dataset_template_details = ps.get_dataset_template_details(dataset_template_id)
-    metadata_schema =  dataset_template_details.get('rules')['root']
-
-    return metadata_schema
-
-def upload_and_register_output(output_band_path, global_metadata):
+def upload(output_band_path, global_metadata):
 
     if DEVELOPMENT:
         return
@@ -56,23 +37,6 @@ def upload_and_register_output(output_band_path, global_metadata):
             output_band_path,
             file_stream,
         )
-
-        # Monkey patch serializer
-        def monkey_patched_json_encoder_default(encoder, obj):
-            if isinstance(obj, set):
-                return list(obj)
-            return json.JSONEncoder.default(encoder, obj)
-
-        json.JSONEncoder.default = monkey_patched_json_encoder_default
-        
-        ps.register_validation(
-            uploaded_bucket_object_id,
-            dataset_template_id,
-            global_metadata,
-            []
-        )
-
-
 
 input_directory = 'inputs'
 
@@ -202,7 +166,7 @@ for input_tif in files:
             forward_band_tags=True
         )
 
-        upload_and_register_output(output_band_path, global_metadata)        
+        upload(output_band_path, global_metadata)        
 
         if not DEVELOPMENT:
             os.remove(output_band_path)
