@@ -173,27 +173,9 @@ for input_tif in files:
         
         output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
 
-        try:
-            jsonschema_validate(
-                global_metadata,
-                get_metadata_schema()
-            )
-
-        except SchemaError as schema_error:
-            
-            raise ValueError(
-                f"Schema itself is not valid with template id. Template id: {dataset_template_id}. Original exception: {str(schema_error)}"
-            )
-        except  ValidationError as validation_error:
-            raise ValueError(
-                f"Invalid data. Template id: {dataset_template_id}. Data: {str(validation_error)}. Original exception: {str(validation_error)}"
-            )
-        
-
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
         dst_profile = cog_profiles.get("deflate")
-
 
         dst_profile.update({
             "dtype": "float32",
