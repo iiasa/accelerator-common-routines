@@ -59,7 +59,7 @@ for input_tif in files:
     global_metadata = {}
     variables_metadata = []
 
-    source_file_id = '-'.join(input_tif.split('.tif')[0].split('/')) 
+    source_file_id = input_tif.split('.tif')[0]
     reprojected_raster_file = None
     
     print(f"_____________Validating and converting file: {input_tif}  to cloud optimized GeoTIFF_____________")
@@ -91,6 +91,8 @@ for input_tif in files:
         if source_crs != target_crs:
 
             reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
+
+            os.makedirs(os.path.dirname(reprojected_raster_file), exist_ok=True)
     
             transform, width, height = calculate_default_transform(
                 source_crs, target_crs, src.width, src.height, *src.bounds
@@ -134,8 +136,12 @@ for input_tif in files:
 
         
     for band_index in range(1, total_bands + 1):
-        
-        output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
+        output_band_path = f"outputs/{source_file_id}.tif"
+
+        if band_index > 1:
+            output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
+
+        os.makedirs(os.path.dirname(output_band_path), exist_ok=True)
 
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
@@ -144,8 +150,8 @@ for input_tif in files:
         dst_profile.update({
             "dtype": "float32",
             "nodata": nodata_value,
-            "blockxsize": 128,
-            "blockysize": 128,
+            "blockxsize": 256,
+            "blockysize": 256,
             "crs": target_crs,
             "BIGTIFF":"IF_SAFER"
         })
@@ -159,12 +165,22 @@ for input_tif in files:
             config={
                 "GDAL_NUM_THREADS": "ALL_CPUS",
                 "GDAL_TIFF_INTERNAL_MASK": True,
-                "GDAL_TIFF_OVR_BLOCKSIZE": "128",
+                "GDAL_TIFF_OVR_BLOCKSIZE": "256",
             },
-            in_memory=False,
+            in_memory=True,
             quiet=False,
             forward_band_tags=True
         )
+
+        with rasterio.open(output_band_path, "r+") as dst:
+            data = dst.read(1, masked=True, nodata=nodata_value)
+            valid = data.compressed()
+            if valid.size > 0:
+                min_val, max_val = float(valid.min()), float(valid.max())
+                dst.update_tags(1,
+                    STATISTICS_MINIMUM=str(min_val),
+                    STATISTICS_MAXIMUM=str(max_val)
+                )
 
         upload(output_band_path, global_metadata)        
 
