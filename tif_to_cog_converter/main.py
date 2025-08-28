@@ -146,8 +146,8 @@ for input_tif in files:
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
         with rasterio.open(cog_input) as src:
-            src.nodata = nodata_value
             data = src.read(band_index, masked=True)
+            data = np.ma.masked_equal(data, nodata_value)
             valid = data.compressed()
             band_tags = {}
             band_tags.update(global_metadata)
