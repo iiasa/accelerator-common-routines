@@ -5,9 +5,9 @@ xarray
 rioxarray
 h5netcdf
 rasterio
-rio-cogeo
+rio-cogeo>=3.5
 mercantile
-gdal
+gdal==3.6.3
 cftime
 shapely
 geopandas
