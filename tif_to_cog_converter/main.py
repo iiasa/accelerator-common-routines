@@ -145,6 +145,18 @@ for input_tif in files:
 
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
+        with rasterio.open(cog_input) as src:
+            data = src.read(band_index, masked=True, nodata=nodata_value)
+            valid = data.compressed()
+            band_tags = {}
+            band_tags.update(global_metadata)
+            band_tags.update(variables_metadata[band_index - 1])
+            if valid.size > 0:
+                band_tags.update({
+                    "STATISTICS_MINIMUM": str(float(valid.min())),
+                    "STATISTICS_MAXIMUM": str(float(valid.max())),
+                })
+
         dst_profile = cog_profiles.get("deflate")
 
         dst_profile.update({
@@ -167,20 +179,10 @@ for input_tif in files:
                 "GDAL_TIFF_INTERNAL_MASK": True,
                 "GDAL_TIFF_OVR_BLOCKSIZE": "256",
             },
-            in_memory=True,
+            in_memory=False,
             quiet=False,
             forward_band_tags=True
         )
-
-        with rasterio.open(output_band_path, "r+") as dst:
-            data = dst.read(1, masked=True, nodata=nodata_value)
-            valid = data.compressed()
-            if valid.size > 0:
-                min_val, max_val = float(valid.min()), float(valid.max())
-                dst.update_tags(1,
-                    STATISTICS_MINIMUM=str(min_val),
-                    STATISTICS_MAXIMUM=str(max_val)
-                )
 
         upload(output_band_path, global_metadata)        
 
