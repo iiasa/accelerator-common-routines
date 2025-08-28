@@ -7,7 +7,7 @@ h5netcdf
 rasterio
 rio-cogeo
 mercantile
-gdal==3.6.3
+gdal
 cftime
 shapely
 geopandas
