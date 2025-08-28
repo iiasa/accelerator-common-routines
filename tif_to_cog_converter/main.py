@@ -145,17 +145,25 @@ for input_tif in files:
 
         cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
 
+        
+        band_tags = {}
         with rasterio.open(cog_input) as src:
-            data = src.read(band_index, masked=True)
-            data = np.ma.masked_equal(data, nodata_value)
-            valid = data.compressed()
-            band_tags = {}
-            band_tags.update(global_metadata)
+            min_val, max_val = None, None
+            for _, window in src.block_windows(band_index):
+                block = src.read(band_index, window=window, masked=True)
+                if nodata_value is not None:
+                    block = np.ma.masked_equal(block, nodata_value)
+
+                if block.count() > 0:
+                    bmin, bmax = float(block.min()), float(block.max())
+                    min_val = bmin if min_val is None else min(min_val, bmin)
+                    max_val = bmax if max_val is None else max(max_val, bmax)
+            
             band_tags.update(variables_metadata[band_index - 1])
-            if valid.size > 0:
+            if min_val is not None and max_val is not None:
                 band_tags.update({
-                    "STATISTICS_MINIMUM": str(float(valid.min())),
-                    "STATISTICS_MAXIMUM": str(float(valid.max())),
+                    "STATISTICS_MINIMUM": str(min_val),
+                    "STATISTICS_MAXIMUM": str(max_val),
                 })
 
         dst_profile = cog_profiles.get("deflate")
@@ -182,7 +190,9 @@ for input_tif in files:
             },
             in_memory=False,
             quiet=False,
-            forward_band_tags=True
+            forward_band_tags=True,
+            tags=global_metadata,
+            band_tags=band_tags
         )
 
         upload(output_band_path, global_metadata)        
