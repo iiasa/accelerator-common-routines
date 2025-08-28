@@ -1,9 +1,8 @@
 import sys
-
 import os
 import json
 import rasterio
-from rasterio.warp import calculate_default_transform, reproject, Resampling
+from rasterio.vrt import WarpedVRT
 from rio_cogeo.cogeo import cog_translate
 from rio_cogeo.profiles import cog_profiles
 from accli import AjobCliService
@@ -17,20 +16,16 @@ import subprocess
 DEVELOPMENT = os.environ.get('DEVELOPMENT', None)
 
 def get_project_service():
-
     project_service = AjobCliService(
         os.environ.get('ACC_JOB_TOKEN'),
         server_url=os.environ.get('ACC_JOB_GATEWAY_SERVER'),
         verify_cert=False
     )
-
     return project_service
 
 def upload(output_band_path, global_metadata):
-
     if DEVELOPMENT:
         return
-
     ps = get_project_service()
     with open(output_band_path, "rb") as file_stream:
         uploaded_bucket_object_id = ps.add_filestream_as_job_output(
@@ -39,7 +34,6 @@ def upload(output_band_path, global_metadata):
         )
 
 input_directory = 'inputs'
-
 files = []
 for dirpath, dirnames, filenames in os.walk(input_directory):
     for f in filenames:
@@ -48,33 +42,28 @@ for dirpath, dirnames, filenames in os.walk(input_directory):
             relative_path = os.path.relpath(full_path, start=os.getcwd())
             files.append(relative_path)
 
-            
 for input_tif in files:
-
 
     total_bands = 0
     nodata_value = None
     source_crs = None
-    target_crs = 'EPSG:3857'
     global_metadata = {}
     variables_metadata = []
 
     source_file_id = input_tif.split('.tif')[0]
-    reprojected_raster_file = None
-    
-    print(f"_____________Validating and converting file: {input_tif}  to cloud optimized GeoTIFF_____________")
-    
+
+    print(f"_____________Validating and converting file: {input_tif} to cloud optimized GeoTIFF_____________")
+
     with rasterio.open(input_tif) as src:
+        # figure out source CRS
+        crs_override = os.environ.get("INPUT_FILE_CRS")
+        if src.crs:
+            source_crs = src.crs
+        elif crs_override:
+            source_crs = CRS.from_string(crs_override)
+        else:
+            raise ValueError(f"{input_tif} has no CRS and INPUT_FILE_CRS not provided")
 
-        source_crs = os.environ.get('INPUT_FILE_CRS') 
-
-        if source_crs is None:
-            source_crs = src.crs.to_epsg()
-        
-        if source_crs is None:
-            raise ValueError("CRS is neither in the file nor provided as an environment variable.")
-
-        
         total_bands = src.count
         nodata_value = os.environ.get('INPUT_FILE_NODATA')
         if nodata_value is not None:
@@ -82,127 +71,84 @@ for input_tif in files:
         else:
             nodata_value = src.nodata
 
-
         global_metadata = src.tags()
         variables_metadata = [src.tags(bi) for bi in range(1, total_bands + 1)]
 
-
-
-        if source_crs != target_crs:
-
-            reprojected_raster_file = f"outputs/{source_file_id}-reprojected.tif"
-
-            os.makedirs(os.path.dirname(reprojected_raster_file), exist_ok=True)
-    
-            transform, width, height = calculate_default_transform(
-                source_crs, target_crs, src.width, src.height, *src.bounds
-            )
-
-            kwargs = src.meta.copy()
-            kwargs.update({
-                'crs': target_crs,
-                'transform': transform,
-                'width': width,
-                'height': height,
-                'compress': 'LZW', # Optional: Add compression to the temporary file
-                'tiled': True       # Optional: Write temporary file as tiled
-            })
-
-            
-            
-            with rasterio.open(reprojected_raster_file, 'w', **kwargs) as dst:
-                for i in range(1, src.count + 1):
-                    data = src.read(i)
-                    reproject(
-                        source=data,
-                        destination=rasterio.band(dst, i),
-                        src_transform=src.transform,
-                        src_crs=source_crs,
-                        dst_transform=transform,
-                        dst_crs=target_crs,
-                        resampling=Resampling.nearest
-                    )
-
-                    dst.set_band_description(i, src.descriptions[i - 1])
-
-                    if src.units:
-                        dst.set_band_unit(i, src.units[i - 1])
-                    
-                    # Fix: Ensure band tags are strings
-                    dst.update_tags(i, **{k: str(v) for k, v in src.tags(i).items()})
-
-                # Fix: Ensure dataset-level tags are strings
-                dst.update_tags(**{k: str(v) for k, v in src.tags().items()})
-
-        
     for band_index in range(1, total_bands + 1):
         output_band_path = f"outputs/{source_file_id}.tif"
-
         if band_index > 1:
             output_band_path = f"outputs/{source_file_id}_band_{band_index}_output_cog.tif"
-
         os.makedirs(os.path.dirname(output_band_path), exist_ok=True)
 
-        cog_input = reprojected_raster_file if reprojected_raster_file else input_tif
-
-        
-        band_tags = {}
-        with rasterio.open(cog_input) as src:
-            min_val, max_val = None, None
+        # compute stats memory efficiently
+        min_val, max_val = None, None
+        with rasterio.open(input_tif) as src:
             for _, window in src.block_windows(band_index):
                 block = src.read(band_index, window=window, masked=True)
                 if nodata_value is not None:
                     block = np.ma.masked_equal(block, nodata_value)
-
                 if block.count() > 0:
                     bmin, bmax = float(block.min()), float(block.max())
                     min_val = bmin if min_val is None else min(min_val, bmin)
                     max_val = bmax if max_val is None else max(max_val, bmax)
-            
-            band_tags.update(variables_metadata[band_index - 1])
-            if min_val is not None and max_val is not None:
-                band_tags.update({
-                    "STATISTICS_MINIMUM": str(min_val),
-                    "STATISTICS_MAXIMUM": str(max_val),
-                })
+
+        band_tags = {}
+        band_tags.update(variables_metadata[band_index - 1])
+        if min_val is not None and max_val is not None:
+            band_tags.update({
+                "STATISTICS_MINIMUM": str(min_val),
+                "STATISTICS_MAXIMUM": str(max_val),
+            })
 
         dst_profile = cog_profiles.get("deflate")
-
         dst_profile.update({
             "dtype": "float32",
             "nodata": nodata_value,
             "blockxsize": 256,
             "blockysize": 256,
-            "crs": target_crs,
-            "BIGTIFF":"IF_SAFER"
+            "BIGTIFF": "IF_SAFER",
         })
 
-        cog_translate(
-            cog_input,
-            output_band_path,
-            dst_profile,
-            indexes=[band_index],
-            nodata=nodata_value,
-            config={
-                "GDAL_NUM_THREADS": "ALL_CPUS",
-                "GDAL_TIFF_INTERNAL_MASK": True,
-                "GDAL_TIFF_OVR_BLOCKSIZE": "256",
-            },
-            in_memory=False,
-            quiet=False,
-            forward_band_tags=True,
-            tags=global_metadata,
-            band_tags=band_tags
-        )
+        # If src has no CRS, use WarpedVRT with user CRS
+        with rasterio.open(input_tif) as src:
+            if src.crs is None:
+                with WarpedVRT(src, crs=source_crs) as vrt:
+                    cog_translate(
+                        vrt,
+                        output_band_path,
+                        dst_profile,
+                        indexes=[band_index],
+                        nodata=nodata_value,
+                        config={
+                            "GDAL_NUM_THREADS": "ALL_CPUS",
+                            "GDAL_TIFF_INTERNAL_MASK": True,
+                            "GDAL_TIFF_OVR_BLOCKSIZE": "256",
+                        },
+                        in_memory=False,
+                        quiet=False,
+                        forward_band_tags=True,
+                        band_tags={band_index: band_tags},
+                        web_optimized=True
+                    )
+            else:
+                cog_translate(
+                    src,
+                    output_band_path,
+                    dst_profile,
+                    indexes=[band_index],
+                    nodata=nodata_value,
+                    config={
+                        "GDAL_NUM_THREADS": "ALL_CPUS",
+                        "GDAL_TIFF_INTERNAL_MASK": True,
+                        "GDAL_TIFF_OVR_BLOCKSIZE": "256",
+                    },
+                    in_memory=False,
+                    quiet=False,
+                    forward_band_tags=True,
+                    band_tags={band_index: band_tags},
+                    web_optimized=True
+                )
 
-        upload(output_band_path, global_metadata)        
-
+        upload(output_band_path, global_metadata)
         if not DEVELOPMENT:
             os.remove(output_band_path)
-
-    if reprojected_raster_file:
-        if (not DEVELOPMENT):
-            os.remove(reprojected_raster_file)
-        reprojected_raster_file = None
-    
-
