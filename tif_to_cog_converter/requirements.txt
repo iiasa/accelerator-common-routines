@@ -5,7 +5,7 @@ xarray
 rioxarray
 h5netcdf
 rasterio
-rio-cogeo>=3.5
+rio-cogeo
 mercantile
 gdal==3.6.3
 cftime

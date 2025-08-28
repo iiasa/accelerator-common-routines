@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import rasterio
+import morecantile
 from rasterio.vrt import WarpedVRT
 from rio_cogeo.cogeo import cog_translate
 from rio_cogeo.profiles import cog_profiles
@@ -127,8 +128,11 @@ for input_tif in files:
                         in_memory=False,
                         quiet=False,
                         forward_band_tags=True,
-                        band_tags={band_index: band_tags},
-                        web_optimized=True
+                        additional_cog_metadata=band_tags,
+                        tms=morecantile.tms.get("WebMercatorQuad"),
+                        zoom_level_strategy="auto",
+                        aligned_levels=None,
+                        resampling="nearest"
                     )
             else:
                 cog_translate(
@@ -145,8 +149,11 @@ for input_tif in files:
                     in_memory=False,
                     quiet=False,
                     forward_band_tags=True,
-                    band_tags={band_index: band_tags},
-                    web_optimized=True
+                    additional_cog_metadata=band_tags,
+                    tms=morecantile.tms.get("WebMercatorQuad"),
+                    zoom_level_strategy="auto",
+                    aligned_levels=None,
+                    resampling="nearest"
                 )
 
         upload(output_band_path, global_metadata)
