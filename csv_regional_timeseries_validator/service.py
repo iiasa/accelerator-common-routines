@@ -175,6 +175,9 @@ class CsvRegionalTimeseriesVerificationService():
                 row
             )
 
+            print(self.rules.get('root'))
+            print(row)
+
         except SchemaError as schema_error:
            
             raise ValueError(
@@ -389,6 +392,7 @@ class CsvRegionalTimeseriesVerificationService():
                         table.schema,
                         compression='snappy'
                     )
+                print(df)
                 parquet_writer.write_table(table)
                 rows_written += len(chunk)
                 chunk = []
