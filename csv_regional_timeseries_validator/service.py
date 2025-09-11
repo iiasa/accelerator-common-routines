@@ -391,8 +391,6 @@ class CsvRegionalTimeseriesVerificationService():
                         table.schema,
                         compression='snappy'
                     )
-                print(df[['item']].head())
-                print(df.head())
                 parquet_writer.write_table(table)
                 rows_written += len(chunk)
                 chunk = []
