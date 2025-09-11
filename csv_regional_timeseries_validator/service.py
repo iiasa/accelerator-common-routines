@@ -150,7 +150,6 @@ class CsvRegionalTimeseriesVerificationService():
                         f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
         )
                 
-        raise ValueError(row)
         return row
        
     
@@ -312,11 +311,11 @@ class CsvRegionalTimeseriesVerificationService():
                     print("Empty row detected, skipping...")
                     continue
 
-                # try:
-                row = self.validate_row_data(row)
-                # except Exception as err:
-                #     if len(self.errors) <= 50:
-                #         self.errors[str(err)] = str(row)
+                try:
+                    row = self.validate_row_data(row)
+                except Exception as err:
+                    if len(self.errors) <= 50:
+                        self.errors[str(err)] = str(row)
 
                 yield row
     
@@ -432,16 +431,27 @@ class CsvRegionalTimeseriesVerificationService():
         arrays = {}
         for col in df.columns:
             first_val = next((x for x in df[col] if x is not None), None)
+            
             if isinstance(first_val, list):
+                # Ensure lists are consistently typed
                 arrays[col] = pa.array(df[col], type=pa.list_(pa.string()))
+
             elif col == self.value_dimension:
+                # Explicit float type
                 arrays[col] = pa.array(df[col], type=pa.float32())
+
             else:
-                arrays[col] = pa.array(df[col])
+                # Force dictionary encoding for strings with consistent index type
+                if df[col].dtype == object:
+                    arrays[col] = pa.array(df[col], type=pa.dictionary(pa.int16(), pa.string()))
+                else:
+                    arrays[col] = pa.array(df[col])
+
         return pa.Table.from_arrays(
             list(arrays.values()), 
             names=list(arrays.keys())
         )
+
     
                 
     def __call__(self):
