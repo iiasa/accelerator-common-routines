@@ -312,11 +312,11 @@ class CsvRegionalTimeseriesVerificationService():
                     print("Empty row detected, skipping...")
                     continue
 
-                try:
-                    row = self.validate_row_data(row)
-                except Exception as err:
-                    if len(self.errors) <= 50:
-                        self.errors[str(err)] = str(row)
+                # try:
+                row = self.validate_row_data(row)
+                # except Exception as err:
+                #     if len(self.errors) <= 50:
+                #         self.errors[str(err)] = str(row)
 
                 yield row
     
