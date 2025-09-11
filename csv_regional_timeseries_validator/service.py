@@ -308,7 +308,8 @@ class CsvRegionalTimeseriesVerificationService():
                             raise ValueError(f"Value {lhs}  did not match pattern {pattern}")
 
 
-        return validation_row          
+        return validation_row, row 
+          
     def get_validated_rows(self):
         with open(self.filename) as csvfile:
             reader = csv.DictReader(
@@ -365,11 +366,11 @@ class CsvRegionalTimeseriesVerificationService():
 
             writer.writeheader()
             
-            validated_rows = self.get_validated_rows()
+            rows = self.get_validated_rows()
 
-            passed_rows = self.create_associated_parquet(validated_rows)
+            passed_rows = self.create_associated_parquet(rows)
 
-            for row in passed_rows:
+            for _, row in passed_rows:
             
                 writer.writerow(row)
         
@@ -393,7 +394,7 @@ class CsvRegionalTimeseriesVerificationService():
         chunksize = 100_000
         parquet_writer = None
 
-        for row in rows:
+        for row, _ in rows:
             chunk.append(row)
             if len(chunk) >= chunksize:
                 df = pd.DataFrame(chunk)
