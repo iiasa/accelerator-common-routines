@@ -13,6 +13,21 @@ from accli import AjobCliService
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError, SchemaError
 
+from jsonschema.validators import extend, Draft202012Validator
+
+def number_type_checker(checker, instance):
+    if isinstance(instance, str):
+        try:
+            float(instance)  # coercible
+            return True
+        except ValueError:
+            return False
+    return isinstance(instance, (int, float))
+
+type_checker = Draft202012Validator.TYPE_CHECKER.redefine("number", number_type_checker)
+CustomValidator = extend(Draft202012Validator, type_checker=type_checker)
+
+
 
 class CaseInsensitiveDict(dict):
     def __init__(self, *args, **kwargs):
@@ -172,7 +187,7 @@ class CsvRegionalTimeseriesVerificationService():
         row = CaseInsensitiveDict(row)
         validation_row = self.preprocess_row(row.copy(), self.rules['root'])
         try:
-            jsonschema_validate(
+            CustomValidator(
                 validation_row,
                 self.rules.get('root'),
             )
