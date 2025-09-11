@@ -149,7 +149,10 @@ class CsvRegionalTimeseriesVerificationService():
                     raise ValueError(
                         f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
         )
+                
+        raise ValueError(row)
         return row
+       
     
     def get_value_from__mapping_pointers(self, pointer_array, root_schema, row):
         value = None
