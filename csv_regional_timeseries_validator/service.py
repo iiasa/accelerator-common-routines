@@ -173,7 +173,7 @@ class CsvRegionalTimeseriesVerificationService():
         validation_row = self.preprocess_row(row.copy(), self.rules['root'])
         try:
             jsonschema_validate(
-                row,
+                validation_row,
                 self.rules.get('root'),
             )
 
