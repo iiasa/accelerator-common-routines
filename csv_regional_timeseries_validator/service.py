@@ -327,11 +327,11 @@ class CsvRegionalTimeseriesVerificationService():
                     print("Empty row detected, skipping...")
                     continue
 
-                try:
-                    row = self.validate_row_data(row)
-                except Exception as err:
-                    if len(self.errors) <= 50:
-                        self.errors[str(err)] = str(row)
+                # try:
+                row = self.validate_row_data(row)
+                # except Exception as err:
+                #     if len(self.errors) <= 50:
+                #         self.errors[str(err)] = str(row)
 
                 yield row
     
@@ -463,12 +463,12 @@ class CsvRegionalTimeseriesVerificationService():
 
         self.init_validation_metadata()
         
-        try:
-            self.create_validated_file()
-            print('File validated against rules.')
-        except Exception as err:
-            if len(self.errors) <= 50:
-                self.errors[str(err)] = str(err)
+        # try:
+        self.create_validated_file()
+        print('File validated against rules.')
+        # except Exception as err:
+        #     if len(self.errors) <= 50:
+        #         self.errors[str(err)] = str(err)
         
         if self.errors:
             for key in self.errors:
