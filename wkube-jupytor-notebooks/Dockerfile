@@ -43,7 +43,7 @@ USER $NB_UID
 # =====================================================
 EXPOSE 8888
 
-COPY ./README.ai.agent.md /home/jovyan/work/
+COPY ./wkube-jupytor-notebooks/README.ai.agent.md /home/jovyan/work/
 
 # Default CMD is inherited from jupyter/datascience-notebook
 CMD ["start-notebook.sh", "--NotebookApp.ip=0.0.0.0"]
