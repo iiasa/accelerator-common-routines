@@ -23,6 +23,10 @@ RUN jupyter server extension list
 # Switch back to the default jovyan user
 USER $NB_UID
 
+ENV JUPYTER_TOKEN=""
+ENV JUPYTER_PASSWORD=""
+ENV JUPYTER_LOG_LEVEL=ERROR
+
 # =====================================================
 # Set environment variables (optional for Groq)
 # =====================================================
