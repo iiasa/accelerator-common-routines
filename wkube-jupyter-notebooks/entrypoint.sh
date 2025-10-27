@@ -48,10 +48,17 @@ if ip is not None:
     ip.run_line_magic('config', "AiMagics.initial_language_model = 'gpt-4o-mini'")
 EOF
 
+# =====================================================
 # Adjust ownership to the jovyan user
-chown -R $NB_UID:$NB_GID /home/jovyan/.local /home/jovyan/.ipython
+# =====================================================
+chown -R "$NB_UID:$NB_GID" /home/jovyan/.local /home/jovyan/.ipython || true
 
 # =====================================================
-# Continue with main Jupyter command
+# Start Jupyter Notebook
 # =====================================================
-exec "$@"
+echo ">>> Starting Jupyter Notebook..."
+exec start-notebook.sh \
+  --NotebookApp.ip=0.0.0.0 \
+  --NotebookApp.token='' \
+  --NotebookApp.password='' \
+  --ServerApp.log_level=ERROR

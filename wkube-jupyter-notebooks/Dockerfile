@@ -19,7 +19,3 @@ COPY ./wkube-jupyter-notebooks/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 USER $NB_UID
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-
-CMD ["start-notebook.sh", "--NotebookApp.ip=0.0.0.0"]
