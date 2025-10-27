@@ -35,10 +35,23 @@ cat > "$CONFIG_FILE" <<EOF
 }
 EOF
 
-# Adjust ownership to the jovyan user (non-root)
-chown -R $NB_UID:$NB_GID "$CONFIG_DIR"
+# =====================================================
+# Create IPython startup script for Jupyter AI magics
+# =====================================================
+IPYTHON_STARTUP_DIR="/home/jovyan/.ipython/profile_default/startup"
+mkdir -p "$IPYTHON_STARTUP_DIR"
+
+cat > "$IPYTHON_STARTUP_DIR/00-load-jupyter-ai.py" <<'EOF'
+ip = get_ipython()
+if ip is not None:
+    ip.run_line_magic('load_ext', 'jupyter_ai_magics')
+    ip.run_line_magic('config', "AiMagics.initial_language_model = 'gpt-4o-mini'")
+EOF
+
+# Adjust ownership to the jovyan user
+chown -R $NB_UID:$NB_GID /home/jovyan/.local /home/jovyan/.ipython
 
 # =====================================================
-# Continue with the main Jupyter command
+# Continue with main Jupyter command
 # =====================================================
 exec "$@"
