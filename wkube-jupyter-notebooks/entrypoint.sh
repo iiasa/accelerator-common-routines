@@ -53,6 +53,8 @@ EOF
 # =====================================================
 chown -R "$NB_UID:$NB_GID" /home/jovyan/.local /home/jovyan/.ipython || true
 
+echo "export OPENAI_API_KEY=${OPENAI_API_KEY}" >> /home/jovyan/.bashrc
+
 # =====================================================
 # Start Jupyter Notebook
 # =====================================================
