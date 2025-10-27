@@ -15,32 +15,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
 RUN pip install --upgrade pip && \
     pip install "jupyter-ai[all]"
 
-# =====================================================
-# Auto-load AI magic and set default model
-# =====================================================
-RUN mkdir -p /home/jovyan/.ipython/profile_default/startup
-RUN echo "\
-%load_ext jupyter_ai_magics\n\
-%config AiMagics.initial_language_model = 'openai/gpt-4o-mini'\n\
-" > /home/jovyan/.ipython/profile_default/startup/00-load-jupyter-ai.py
+RUN mkdir -p /home/jovyan/.ipython/profile_default/startup && \
+    cat > /home/jovyan/.ipython/profile_default/startup/00-load-jupyter-ai.py <<'EOF'
+ip = get_ipython()
+if ip is not None:
+    ip.run_line_magic('load_ext', 'jupyter_ai_magics')
+    ip.run_line_magic('config', "AiMagics.initial_language_model = 'openai/gpt-4o-mini'")
+EOF
 
 # Enable server extensions (usually already enabled by pip)
 RUN jupyter server extension list
-
-# These files live under ~/.jupyter/lab/user-settings/@jupyter-ai/
-RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/@jupyter-ai/core-extension && \
-    echo '{ \
-  "defaultProvider": "openai", \
-  "defaultModel": "openai/gpt-4o-mini", \
-  "defaultSystemPrompt": "You are a helpful data science assistant in JupyterLab." \
-}' > /home/jovyan/.jupyter/lab/user-settings/@jupyter-ai/core-extension/plugin.jupyterlab-settings
-
-# Open chat sidebar by default
-RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/@jupyter-ai/chat-extension && \
-    echo '{"sidebarVisible": true}' > /home/jovyan/.jupyter/lab/user-settings/@jupyter-ai/chat-extension/plugin.jupyterlab-settings
-
-
-# Switch back to the default jovyan user
 
 
 ENV JUPYTER_LOG_LEVEL=ERROR
