@@ -45,7 +45,7 @@ cat > "$IPYTHON_STARTUP_DIR/00-load-jupyter-ai.py" <<'EOF'
 ip = get_ipython()
 if ip is not None:
     ip.run_line_magic('load_ext', 'jupyter_ai_magics')
-    ip.run_line_magic('config', "AiMagics.initial_language_model = 'openai-chat:gpt-4o-mini'")
+    ip.run_line_magic('config', "AiMagics.default_language_model = 'openai-chat:gpt-4o-mini'")
 EOF
 
 # =====================================================
