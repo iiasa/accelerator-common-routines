@@ -11,7 +11,6 @@ RUN jupyter server extension list
 
 ENV JUPYTER_LOG_LEVEL=ERROR
 
-ENV OPENAI_API_BASE_URL="https://accelerator.iiasa.ac.at/api/v1/openai/v1"
 ENV OPENAI_BASE_URL="https://accelerator.iiasa.ac.at/api/v1/openai/v1"
 
 EXPOSE 8888
