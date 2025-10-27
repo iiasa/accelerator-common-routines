@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
 RUN pip install --upgrade pip && \
     pip install "jupyter-ai[all]"
 
+# Enable server extensions (usually already enabled by pip)
+RUN jupyter server extension list
+
 RUN mkdir -p /home/jovyan/.ipython/profile_default/startup && \
     cat > /home/jovyan/.ipython/profile_default/startup/00-load-jupyter-ai.py <<'EOF'
 ip = get_ipython()
@@ -22,9 +25,6 @@ if ip is not None:
     ip.run_line_magic('load_ext', 'jupyter_ai_magics')
     ip.run_line_magic('config', "AiMagics.initial_language_model = 'openai/gpt-4o-mini'")
 EOF
-
-# Enable server extensions (usually already enabled by pip)
-RUN jupyter server extension list
 
 
 ENV JUPYTER_LOG_LEVEL=ERROR
