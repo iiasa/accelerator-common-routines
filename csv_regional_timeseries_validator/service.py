@@ -311,7 +311,7 @@ class CsvRegionalTimeseriesVerificationService():
         return validation_row, row 
           
     def get_validated_rows(self):
-        with open(self.filename) as csvfile:
+        with open(self.filename, encoding="utf-8-sig") as csvfile:
             reader = csv.DictReader(
                 lower_rows(csvfile), 
                 fieldnames=self.csv_fieldnames, 
