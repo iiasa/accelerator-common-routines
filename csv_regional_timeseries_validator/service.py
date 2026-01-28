@@ -471,12 +471,18 @@ class CsvRegionalTimeseriesVerificationService():
         #         self.errors[str(err)] = str(err)
         
         if self.errors:
-            for key in self.errors:
-                print(f"Invalid data: {self.errors[key]}")
-                print(f"Error: {key}")
+            print("\n" + "!" * 80)
+            print("!!! INVALID DATA DETECTED !!!".center(80))
+            print("!" * 80)
+            for error_msg, row_data in self.errors.items():
+                print(f"\n--- ERROR ---")
+                print(f"Details: {error_msg}")
+                print(f"Row Data: {row_data}")
+            print("\n" + "!" * 80)
+            
             self.delete_local_file(self.temp_validated_filepath)
             print('Temporary validated file deleted')
-            raise ValueError("Invalid data: Data not comply with template rules.")
+            raise ValueError("Invalid data: Data does not comply with template rules.")
         
         verify_only = True if os.environ.get('VERIFY_ONLY') in ['True', 'true', '1', 'TRUE'] else False
         if verify_only:
