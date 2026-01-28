@@ -18,11 +18,11 @@ mkdir -p "$CONFIG_DIR"
 
 cat > "$CONFIG_FILE" <<EOF
 {
-    "model_provider_id": "openai-chat-custom:gpt-4o-mini",
+    "model_provider_id": "openai-chat-custom:gpt-4o",
     "embeddings_provider_id": "openai:text-embedding-3-large",
     "send_with_shift_enter": false,
     "fields": {
-        "openai-chat-custom:gpt-4o-mini": {
+        "openai-chat-custom:gpt-4o": {
             "openai_api_base": "https://accelerator.iiasa.ac.at/api/v1/openai/v1"
         }
     },
@@ -45,7 +45,7 @@ cat > "$IPYTHON_STARTUP_DIR/00-load-jupyter-ai.py" <<'EOF'
 ip = get_ipython()
 if ip is not None:
     ip.run_line_magic('load_ext', 'jupyter_ai_magics')
-    ip.run_line_magic('config', "AiMagics.default_language_model = 'openai-chat:gpt-4o-mini'")
+    ip.run_line_magic('config', "AiMagics.default_language_model = 'openai-chat:gpt-4o'")
 EOF
 
 # =====================================================
