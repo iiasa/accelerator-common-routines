@@ -328,12 +328,12 @@ class CsvRegionalTimeseriesVerificationService():
                     continue
 
                 try:
-                    row = self.validate_row_data(row)
+                    validation_row, original_row = self.validate_row_data(row)
+                    yield validation_row, original_row
                 except Exception as err:
                     if len(self.errors) <= 50:
                         self.errors[str(err)] = str(row)
 
-                yield row
     
     def create_validated_file(self):
         with open(self.temp_validated_filepath, 'w') as csv_validated_file:
@@ -370,9 +370,9 @@ class CsvRegionalTimeseriesVerificationService():
 
             passed_rows = self.create_associated_parquet(rows)
 
-            for _, row in passed_rows:
+            for _, original_row in passed_rows:
             
-                writer.writerow(row)
+                writer.writerow(original_row)
         
 
     def replace_file_content(self, local_file_path):
@@ -394,8 +394,8 @@ class CsvRegionalTimeseriesVerificationService():
         chunksize = 100_000
         parquet_writer = None
 
-        for row, _ in rows:
-            chunk.append(row)
+        for validation_row, original_row in rows:
+            chunk.append(validation_row)
             if len(chunk) >= chunksize:
                 df = pd.DataFrame(chunk)
                 df = self._process_dataframe(df)  # defined below
@@ -411,7 +411,7 @@ class CsvRegionalTimeseriesVerificationService():
                 rows_written += len(chunk)
                 chunk = []
 
-            yield row, _
+            yield validation_row, original_row
 
         if chunk:
             df = pd.DataFrame(chunk)
