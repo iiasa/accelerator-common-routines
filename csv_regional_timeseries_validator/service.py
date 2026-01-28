@@ -204,6 +204,16 @@ class CsvRegionalTimeseriesVerificationService():
         
 
         for key in self.rules['root']['properties']:
+            
+            map_documents = self.get_map_documents(key)
+
+            if map_documents:
+                if type(row[key]) == list:
+                    for item in row[key]:
+                        if item not in map_documents:
+                            raise ValueError(f"'{item}' must be one of {map_documents.keys()}" )
+                elif row[key] not in map_documents:
+                    raise ValueError(f"'{row[key]}' must be one of {map_documents.keys()}" )
 
             # TODO we will remote this whole block of metadata preparation thing.
             if self.rules['root']['properties'][key]['type'] == 'array':
@@ -231,15 +241,6 @@ class CsvRegionalTimeseriesVerificationService():
                 continue
 
 
-            map_documents = self.get_map_documents(key)
-
-            if map_documents:
-                if type(row[key]) == list:
-                    for item in row[key]:
-                        if item not in map_documents:
-                            raise ValueError(f"'{item}' must be one of {map_documents.keys()}" )
-                elif row[key] not in map_documents:
-                    raise ValueError(f"'{row[key]}' must be one of {map_documents.keys()}" )
                 
         
             if self.validation_metadata.get(key):
