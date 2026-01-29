@@ -6,8 +6,8 @@ if [ -n "$ACC_JOB_TOKEN" ] && [ -z "$OPENAI_API_KEY" ]; then
 fi
 
 echo ">>> Starting JupyterLab with Notebook Intelligence..."
-exec /usr/local/bin/start-lab.sh \
-  --LabApp.ip=0.0.0.0 \
-  --LabApp.token='' \
-  --LabApp.password='' \
+exec start-notebook.sh \
+  --ServerApp.ip=0.0.0.0 \
+  --ServerApp.token='' \
+  --ServerApp.password='' \
   --ServerApp.log_level=ERROR
