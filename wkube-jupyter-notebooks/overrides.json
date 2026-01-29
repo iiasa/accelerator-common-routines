@@ -1,0 +1,7 @@
+{
+    "notebook-intelligence:plugin": {
+        "llmProvider": "openai",
+        "openaiModel": "gpt-4o",
+        "openaiBaseUrl": "https://accelerator.iiasa.ac.at/api/v1/openai/v1"
+    }
+}
