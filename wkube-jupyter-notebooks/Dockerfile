@@ -4,7 +4,7 @@ USER root
 
 # Install the extension
 RUN pip install --upgrade pip \
-    && pip install notebook-intelligence
+    && pip install --upgrade "jupyterlab>=4.2.0" notebook-intelligence
 
 # --- FIX 1: Pre-configure Notebook Intelligence to use OpenAI ---
 # We create the config file manually so you don't have to click the UI
