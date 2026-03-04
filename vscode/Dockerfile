@@ -7,12 +7,29 @@ WORKDIR /home/coder/project
 
 # Install python3 and jq for the entrypoint script
 USER root
-RUN apt-get update && apt-get install -y python3 jq sqlite3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    jq \
+    sqlite3 \
+    r-base \
+    libzmq3-dev \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libxml2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install and register kernels
+RUN pip3 install --break-system-packages ipykernel \
+    && R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IRkernel::installspec(user=FALSE)"
+
 USER coder
 
-# Install the Cline extension (formerly known as Claude Dev)
-# The extension ID is saoudrizwan.claude-dev
-RUN code-server --install-extension RooVeterinaryInc.roo-cline
+# Install extensions
+RUN code-server --install-extension RooVeterinaryInc.roo-cline \
+    && code-server --install-extension ms-python.python \
+    && code-server --install-extension ms-toolsai.jupyter \
+    && code-server --install-extension REditorSupport.r
 
 # Copy the entrypoint script
 COPY --chown=coder:coder entrypoint.sh /usr/bin/entrypoint.sh
