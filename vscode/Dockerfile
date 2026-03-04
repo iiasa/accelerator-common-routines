@@ -5,11 +5,13 @@ FROM codercom/code-server:latest
 # Set the working directory to the default project folder
 WORKDIR /home/coder/project
 
-# Install python3 and jq for the entrypoint script
+# Install python3, jq, sqlite3, sudo, and language dependencies
 USER root
 RUN apt-get update && apt-get install -y \
+    sudo \
     python3 \
     python3-pip \
+    python3-venv \
     jq \
     sqlite3 \
     r-base \
@@ -17,13 +19,34 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libcurl4-openssl-dev \
     libxml2-dev \
+    jupyter-core \
+    jupyter-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install and register kernels
-RUN pip3 install --break-system-packages ipykernel \
-    && R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IRkernel::installspec(user=FALSE)"
+# Install and register R kernel system-wide
+RUN R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IRkernel::installspec(user=FALSE)"
+
+# --- System Packages: Grant sudo access to the coder user ---
+# This allows the user to install system packages (e.g., via apt-get) within the container
+RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
 
 USER coder
+
+# --- Python: Create a virtual environment for the user ---
+# This allows secure user-level pip installs without breaking system packages
+ENV VIRTUAL_ENV=/home/coder/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN echo 'export PATH="/home/coder/venv/bin:$PATH"' >> /home/coder/.bashrc
+
+# Install ipykernel inside the virtual environment
+RUN pip install --upgrade pip && pip install ipykernel
+
+# --- R: Configure user-level library for packages ---
+# Ensures install.packages() doesn't fail on permission errors or prompt interactively
+RUN mkdir -p /home/coder/R/library && \
+    echo 'R_LIBS_USER="~/R/library"' > /home/coder/.Renviron && \
+    echo 'options(repos = c(CRAN = "https://cloud.r-project.org/"))' > /home/coder/.Rprofile
 
 # Install extensions
 RUN code-server --install-extension RooVeterinaryInc.roo-cline \
