@@ -55,7 +55,7 @@ RUN code-server --install-extension RooVeterinaryInc.roo-cline \
     && code-server --install-extension REditorSupport.r
 
 # Copy the entrypoint script
-COPY --chown=coder:coder ./vscode/entrypoint.sh /usr/bin/entrypoint.sh
+COPY --chown=coder:coder entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
 
 # Expose the default port for code-server
