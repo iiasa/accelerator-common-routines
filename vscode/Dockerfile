@@ -48,6 +48,10 @@ RUN mkdir -p /home/coder/R/library && \
     echo 'R_LIBS_USER="~/R/library"' > /home/coder/.Renviron && \
     echo 'options(repos = c(CRAN = "https://cloud.r-project.org/"))' > /home/coder/.Rprofile
 
+# --- Disable Settings ---
+RUN mkdir -p /home/coder/.local/share/code-server/User && \
+    echo '{"chat.disableAIFeatures": true, "chat.editor.enabled": false}' > /home/coder/.local/share/code-server/User/settings.json
+
 # Install extensions
 RUN code-server --install-extension RooVeterinaryInc.roo-cline \
     && code-server --install-extension ms-python.python \

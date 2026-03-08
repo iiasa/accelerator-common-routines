@@ -30,6 +30,9 @@ RUN R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IR
 # This allows the user to install system packages (e.g., via apt-get) within the container
 RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
 
+# Ensure the default project directory is owned by the coder user
+RUN chown -R coder:coder /home/coder/project
+
 USER coder
 
 # --- Python: Create a virtual environment for the user ---
@@ -47,6 +50,10 @@ RUN pip install --upgrade pip && pip install ipykernel
 RUN mkdir -p /home/coder/R/library && \
     echo 'R_LIBS_USER="~/R/library"' > /home/coder/.Renviron && \
     echo 'options(repos = c(CRAN = "https://cloud.r-project.org/"))' > /home/coder/.Rprofile
+
+# --- Disable Settings ---
+RUN mkdir -p /home/coder/.local/share/code-server/User && \
+    echo '{"chat.disableAIFeatures": true, "chat.editor.enabled": false}' > /home/coder/.local/share/code-server/User/settings.json
 
 # Install extensions
 RUN code-server --install-extension RooVeterinaryInc.roo-cline \
