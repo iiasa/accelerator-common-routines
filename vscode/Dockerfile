@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    python3-ipykernel \
     jq \
     sqlite3 \
     r-base \
@@ -32,15 +33,6 @@ RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
 
 USER coder
 
-# --- Python: Create a virtual environment for the user ---
-# This allows secure user-level pip installs without breaking system packages
-ENV VIRTUAL_ENV=/home/coder/venv
-RUN python3 -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN echo 'export PATH="/home/coder/venv/bin:$PATH"' >> /home/coder/.bashrc
-
-# Install ipykernel inside the virtual environment
-RUN pip install --upgrade pip && pip install ipykernel
 
 # --- R: Configure user-level library for packages ---
 # Ensures install.packages() doesn't fail on permission errors or prompt interactively
