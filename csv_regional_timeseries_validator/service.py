@@ -84,6 +84,7 @@ class CsvRegionalTimeseriesVerificationService():
         ram_required=4 * 1024**3,
         disk_required=6 * 1024**3,
         cores_required=1,
+        original_filepath: Optional[str]=None
     ):
         
         self.project_service = AjobCliService(
@@ -101,6 +102,7 @@ class CsvRegionalTimeseriesVerificationService():
         self.cores_required = cores_required
 
         self.csv_fieldnames = csv_fieldnames
+        self.original_filepath = original_filepath
         
         # Remove csv extensiopn from filename and add validation.csv. filename is relative filepath
         self.temp_validated_filepath = (
@@ -379,8 +381,7 @@ class CsvRegionalTimeseriesVerificationService():
     def replace_file_content(self, local_file_path):
         with open(local_file_path, "rb") as file_stream:
             bucket_object_id = self.project_service.replace_bucket_object_id_content(
-                # self.filename starts with 'inputs/' string remove it. eg. inputs/xyz/exp.csv
-                self.filename[7:],
+                self.original_filepath,
                 file_stream,
             )
             return bucket_object_id
@@ -510,7 +511,7 @@ class CsvRegionalTimeseriesVerificationService():
         print('File replaced')
 
         
-        s3_parquet_filename = f"{self.filename[7:]}.parquet"
+        s3_parquet_filename = f"{self.original_filepath}.parquet"
 
         if s3_parquet_filename.startswith("/"):
             s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[2:])

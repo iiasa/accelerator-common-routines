@@ -3,22 +3,19 @@ from service import CsvRegionalTimeseriesVerificationService
 
 input_directory = 'inputs'
 
-files = []
-for dirpath, dirnames, filenames in os.walk(input_directory):
-    for f in filenames:
-        if f != '.gitkeep':
-            full_path = os.path.join(dirpath, f)
-            relative_path = os.path.relpath(full_path, start=os.getcwd())
-            files.append(relative_path)
+filepaths = os.environ.get('selected_filenames', '').split(',')
 
-for file in files:
+
+for filepath in filepaths:
     
     print(f"_____________Validating file: {file} _____________")
 
     csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
-        filename=file,
+        filename=f"inputs/{filepath.split('/')[-1]}",
         dataset_template_id=os.environ.get('dataset_template_id'),
-        job_token=os.environ.get('ACC_JOB_TOKEN')
+        job_token=os.environ.get('ACC_JOB_TOKEN'),
+        original_filepath=filepath
+
     )
 
     csv_regional_timeseries_verification_service()
