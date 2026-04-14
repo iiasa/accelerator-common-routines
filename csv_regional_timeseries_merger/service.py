@@ -13,8 +13,9 @@ class CSVRegionalTimeseriesMergeService:
         self,
         *,
         filename: str,
-        files: list[int],
-        job_token
+        files: list[str],
+        job_token,
+        filepaths: list[str]
     ):
         
         if not filename:
@@ -32,6 +33,7 @@ class CSVRegionalTimeseriesMergeService:
         self.output_filename = filename
 
         self.files = files
+        self.filepaths = filepaths
     
     def check_input_files(self):
         
@@ -39,12 +41,12 @@ class CSVRegionalTimeseriesMergeService:
             raise ValueError("Argument files should be at least two items.")
         
         first_file_type_id = self.project_service.get_filename_dataset_type(
-            self.files[0][7:]
+            self.filepaths[0]
         )
         
-        for file in self.files[1:]:
+        for filepath in self.filepaths[1:]:
             other_file_type_id = self.project_service.get_filename_dataset_type(
-                file[7:]
+                filepath
             )
 
             if (first_file_type_id != None) and (first_file_type_id != other_file_type_id):
@@ -65,7 +67,7 @@ class CSVRegionalTimeseriesMergeService:
 
         
     def get_merged_validated_metadata(self):
-        first_validation_details = self.project_service.get_filename_validation_details(self.files[0][7:])
+        first_validation_details = self.project_service.get_filename_validation_details(self.filepaths[0])
 
         dataset_template_details = self.project_service.get_dataset_template_details(first_validation_details['dataset_template_id'])
 
@@ -79,16 +81,16 @@ class CSVRegionalTimeseriesMergeService:
 
         first_validation_metadata = first_validation_details['validation_metadata']
 
-        for file in self.files[1:]:
-            next_validation_metadata = self.project_service.get_filename_validation_details(file[7:])['validation_metadata']
+        for filepath in self.filepaths[1:]:
+            next_validation_metadata = self.project_service.get_filename_validation_details(filepath)['validation_metadata']
 
             for key in first_validation_metadata:
 
                 if f"{time_dimension.lower()}_meta" not in first_validation_metadata:
-                    raise ValueError(f"Revalidate bucket object #{self.files[0]}")
+                    raise ValueError(f"Revalidate bucket object #{self.filepaths[0]}")
 
                 if f"{time_dimension.lower()}_meta" not in next_validation_metadata:
-                    raise ValueError(f"Revalidate bucket object #{file}")
+                    raise ValueError(f"Revalidate bucket object #{filepath}")
 
                 if key.lower() == f"{time_dimension.lower()}_meta":
                     if next_validation_metadata[key.lower()]['min_value'] < first_validation_metadata[key.lower()]['min_value']:
