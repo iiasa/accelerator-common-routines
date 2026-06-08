@@ -503,25 +503,28 @@ class CsvRegionalTimeseriesVerificationService():
         # Select columns in the required order
         table = table.select(self.validated_headers)
 
-        # Cast all dictionary columns to string before sorting (PyArrow sort_indices does not support dictionary type)
-        t_cast = time.time()
-        print("Casting dictionary columns to string for sorting...")
+        # Build a temporary table containing indices of dictionary columns to sort efficiently without high memory usage
+        t_prep = time.time()
+        print("Preparing temporary table for sorting by dictionary indices...")
+        temp_columns = {}
         for col_name in table.schema.names:
-            field = table.schema.field(col_name)
-            if isinstance(field.type, pa.DictionaryType):
-                col_idx = table.schema.get_field_index(col_name)
-                casted_col = pc.cast(table.column(col_name), pa.string())
-                table = table.set_column(col_idx, col_name, casted_col)
-        print(f"✅ Casted dictionary columns in {time.time() - t_cast:.2f}s")
+            col = table.column(col_name)
+            if isinstance(col.type, pa.DictionaryType):
+                temp_columns[col_name] = col.combine_chunks().indices
+            else:
+                temp_columns[col_name] = col
+        
+        temp_table = pa.Table.from_pydict(temp_columns)
+        print(f"✅ Prepared temporary table in {time.time() - t_prep:.2f}s")
 
         # Sort by all validated headers except the value column
         t_sort = time.time()
-        print("Sorting table in memory...")
+        print("Sorting table in memory by indices...")
         sort_keys = []
         for col in self.validated_headers[:-1]:
             sort_keys.append((col, "ascending"))
 
-        sorted_indices = pc.sort_indices(table, sort_keys=sort_keys)
+        sorted_indices = pc.sort_indices(temp_table, sort_keys=sort_keys)
         sorted_table = table.take(sorted_indices)
         print(f"✅ Sorted table in {time.time() - t_sort:.2f}s")
 
