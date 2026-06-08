@@ -405,6 +405,7 @@ class CsvRegionalTimeseriesVerificationService():
                     table = table.cast(parquet_writer.schema)
                 parquet_writer.write_table(table)
                 rows_written += len(chunk)
+                print(f"Processed chunk of {len(chunk)} rows. Total written: {rows_written}")
                 chunk = []
 
             yield validation_row, original_row
@@ -491,24 +492,45 @@ class CsvRegionalTimeseriesVerificationService():
         print("Sorting and generating CSV using Parquet...")
         import pyarrow.compute as pc
         import pyarrow.csv as pa_csv
+        import time
 
+        t_start = time.time()
         parquet_filepath = self.temp_sorted_filepath + '.parquet'
+        print(f"Loading Parquet file '{parquet_filepath}' into memory...")
         table = pq.read_table(parquet_filepath)
+        print(f"✅ Loaded Parquet file in {time.time() - t_start:.2f}s")
 
         # Select columns in the required order
         table = table.select(self.validated_headers)
 
+        # Cast all dictionary columns to string before sorting (PyArrow sort_indices does not support dictionary type)
+        t_cast = time.time()
+        print("Casting dictionary columns to string for sorting...")
+        for col_name in table.schema.names:
+            field = table.schema.field(col_name)
+            if isinstance(field.type, pa.DictionaryType):
+                col_idx = table.schema.get_field_index(col_name)
+                casted_col = pc.cast(table.column(col_name), pa.string())
+                table = table.set_column(col_idx, col_name, casted_col)
+        print(f"✅ Casted dictionary columns in {time.time() - t_cast:.2f}s")
+
         # Sort by all validated headers except the value column
+        t_sort = time.time()
+        print("Sorting table in memory...")
         sort_keys = []
         for col in self.validated_headers[:-1]:
             sort_keys.append((col, "ascending"))
 
         sorted_indices = pc.sort_indices(table, sort_keys=sort_keys)
         sorted_table = table.take(sorted_indices)
+        print(f"✅ Sorted table in {time.time() - t_sort:.2f}s")
 
         # Write directly to the sorted CSV
+        t_csv = time.time()
+        print("Writing sorted CSV...")
         pa_csv.write_csv(sorted_table, self.temp_sorted_filepath)
-        print("Validated file sorted and CSV created")
+        print(f"✅ Wrote sorted CSV in {time.time() - t_csv:.2f}s")
+        print(f"🎉 Parquet-based sorting and CSV export completed in {time.time() - t_start:.2f}s")
 
 
         replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
