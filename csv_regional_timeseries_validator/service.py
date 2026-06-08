@@ -409,6 +409,8 @@ class CsvRegionalTimeseriesVerificationService():
                         table.schema,
                         compression='snappy'
                     )
+                else:
+                    table = table.cast(parquet_writer.schema)
                 parquet_writer.write_table(table)
                 rows_written += len(chunk)
                 chunk = []
@@ -425,6 +427,8 @@ class CsvRegionalTimeseriesVerificationService():
                     table.schema,
                     compression='snappy'
                 )
+            else:
+                table = table.cast(parquet_writer.schema)
             parquet_writer.write_table(table)
             rows_written += len(chunk)
 
