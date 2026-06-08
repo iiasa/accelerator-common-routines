@@ -339,43 +339,35 @@ class CsvRegionalTimeseriesVerificationService():
 
     
     def create_validated_file(self):
-        with open(self.temp_validated_filepath, 'w') as csv_validated_file:
+        # Prepare final header order
+        headers = self.rules['root']['properties'].copy()
 
-            # Prepare final header order
-            headers = self.rules['root']['properties'].copy()
+        self.validated_headers = []
 
-            self.validated_headers = []
+        final_dimensions_order = self.rules['root_schema_declarations'].get('final_dimensions_order')
 
-            final_dimensions_order = self.rules['root_schema_declarations'].get('final_dimensions_order')
+        if final_dimensions_order:
+            for item in final_dimensions_order:
+                if item in headers:
+                    if item not in [self.time_dimension, self.value_dimension]:
+                        self.validated_headers.append(item)
+        else:
+            raise ValueError("'final_dimensions_order' in template is required")
+        
+        for item in headers:
+            used_headers = self.validated_headers + [self.time_dimension, self.value_dimension]
+            if item not in used_headers:
+                self.validated_headers.append(item)
+        
+        self.validated_headers = self.validated_headers + [self.time_dimension, self.value_dimension]
+        # End final order preparation
 
-            if final_dimensions_order:
-                for item in final_dimensions_order:
-                    if item in headers:
-                        if item not in [self.time_dimension, self.value_dimension]:
-                            self.validated_headers.append(item)
-            else:
-                raise ValueError("'final_dimensions_order' in template is required")
-            
-            for item in headers:
-                used_headers = self.validated_headers + [self.time_dimension, self.value_dimension]
-                if item not in used_headers:
-                    self.validated_headers.append(item)
-            
-            self.validated_headers = self.validated_headers + [self.time_dimension, self.value_dimension]
-            # End final order preparation
+        rows = self.get_validated_rows()
 
-            
-            writer = csv.DictWriter(csv_validated_file, fieldnames=self.validated_headers, extrasaction='ignore')
+        passed_rows = self.create_associated_parquet(rows)
 
-            writer.writeheader()
-            
-            rows = self.get_validated_rows()
-
-            passed_rows = self.create_associated_parquet(rows)
-
-            for _, original_row in passed_rows:
-            
-                writer.writerow(original_row)
+        for _ in passed_rows:
+            pass
         
 
     def replace_file_content(self, local_file_path):
@@ -496,19 +488,27 @@ class CsvRegionalTimeseriesVerificationService():
             return
 
 
-        sort_order_option_text = ' '.join([f"-k{i+1},{i+1}{'n' if self.validated_headers[i] == self.time_dimension else ''}" for i in range(len(self.validated_headers[:-1]))])
+        print("Sorting and generating CSV using Parquet...")
+        import pyarrow.compute as pc
+        import pyarrow.csv as pa_csv
 
-        sort_command = f"head -n1 {self.temp_validated_filepath} >> {self.temp_sorted_filepath} && tail -n+2 {self.temp_validated_filepath} | sort -t',' {sort_order_option_text} >> {self.temp_sorted_filepath}"
+        parquet_filepath = self.temp_sorted_filepath + '.parquet'
+        table = pq.read_table(parquet_filepath)
 
-        print(sort_command)
-        print(self.validated_headers)
+        # Select columns in the required order
+        table = table.select(self.validated_headers)
 
-        subprocess.run(
-            sort_command,
-            capture_output=True,
-            shell=True
-        )
-        print("Validated file sorted")
+        # Sort by all validated headers except the value column
+        sort_keys = []
+        for col in self.validated_headers[:-1]:
+            sort_keys.append((col, "ascending"))
+
+        sorted_indices = pc.sort_indices(table, sort_keys=sort_keys)
+        sorted_table = table.take(sorted_indices)
+
+        # Write directly to the sorted CSV
+        pa_csv.write_csv(sorted_table, self.temp_sorted_filepath)
+        print("Validated file sorted and CSV created")
 
 
         replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
