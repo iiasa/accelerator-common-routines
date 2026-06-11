@@ -2,9 +2,11 @@ import io
 import os
 import json
 import uuid
+import shutil
+import csv
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pandas as pd
+import pyarrow.csv as pa_csv
 from accli import AjobCliService
 
 
@@ -113,39 +115,50 @@ class CSVRegionalTimeseriesMergeService:
 
     
     def create_associated_parquet(self, merged_filepath):
-        chunksize = 100_000
-
         value_dimension = self.rules['root_schema_declarations']['value_dimension']
         time_dimension = self.rules['root_schema_declarations']['time_dimension']
 
+        # Read the CSV header using standard csv reader to map column names to types
+        with open(merged_filepath, 'r', encoding='utf-8-sig') as f:
+            reader_csv = csv.reader(f)
+            columns = next(reader_csv)
+
+        column_types = {}
+        for col in columns:
+            if col == value_dimension:
+                column_types[col] = pa.float32()
+            elif col == time_dimension:
+                column_types[col] = pa.int32()
+            else:
+                column_types[col] = pa.dictionary(pa.int32(), pa.string())
+
+        convert_options = pa_csv.ConvertOptions(column_types=column_types)
+        
+        print(f"Streaming CSV '{merged_filepath}' to Parquet using PyArrow...")
+        reader = pa_csv.open_csv(merged_filepath, convert_options=convert_options)
+        
         parquet_writer = None
+        rows_written = 0
 
-        for i, chunk in enumerate(pd.read_csv(merged_filepath, chunksize=chunksize)):
-            
-            if value_dimension in chunk.columns:
-                chunk[value_dimension] = chunk[value_dimension].astype('float32')
-
-            if time_dimension in chunk.columns:
-                chunk[time_dimension] = chunk[time_dimension].astype('int32')
-
-            for col in chunk.columns:
-                if col != value_dimension:
-                    chunk[col] = chunk[col].astype('category')
-
-            table = pa.Table.from_pandas(chunk, preserve_index=False)
-
+        for batch in reader:
+            table = pa.Table.from_batches([batch])
             if parquet_writer is None:
                 parquet_writer = pq.ParquetWriter(
                     self.files[0] + '.parquet',
                     table.schema,
                     compression='snappy'
                 )
+            else:
+                table = table.cast(parquet_writer.schema)
 
             parquet_writer.write_table(table)
+            rows_written += len(table)
+            print(f"Processed chunk of {len(table)} rows. Total written: {rows_written}")
 
         # Finalize writer
         if parquet_writer:
             parquet_writer.close()
+        print(f"✅ Total rows written: {rows_written}")
 
 
     def __call__(self):
@@ -167,13 +180,10 @@ class CSVRegionalTimeseriesMergeService:
                         merged_file.write(dat)
 
                     # Skip the first line of the being_merged_file
-                    first_line = being_merged_file.readline()
+                    being_merged_file.readline()
 
-                    while True:
-                        dat = being_merged_file.read(1024**2)
-                        if not dat:
-                            break
-                        merged_file.write(dat)
+                    # Stream copy the remaining content using shutil with a large buffer
+                    shutil.copyfileobj(being_merged_file, merged_file, length=16*1024*1024)
 
                 
         merge_only = True if os.environ.get('MERGE_ONLY') in ['True', 'true', '1', 'TRUE'] else False
