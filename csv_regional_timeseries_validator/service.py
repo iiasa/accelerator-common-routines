@@ -5,6 +5,7 @@ import subprocess
 import csv
 import uuid
 import itertools
+import socket
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -72,6 +73,51 @@ def lower_rows(iterator):
     # return itertools.chain([next(iterator).lower()], iterator)
     for item in iterator:
         yield item.lower()
+
+
+def register_validation_via_ipc(
+    validated_filename: str,
+    dataset_template_id: int,
+    validated_metadata: dict,
+    validation_supporting_filenames: list
+) -> bool:
+    """
+    Communicates with the parent wagt agent over the Unix socket to register validation.
+    """
+    socket_path = "/tmp/wagt.sock"
+    if not os.path.exists(socket_path):
+        raise FileNotFoundError(f"IPC Unix socket not found at {socket_path}. Is the agent running?")
+    # 1. Structure the request matching the Go IPCRequest format
+    request_payload = {
+        "action": "register-validation-with-filename",
+        "payload": {
+            "validated_filename": validated_filename,
+            "dataset_template_id": dataset_template_id,
+            "validated_metadata": validated_metadata,
+            "validation_supporting_filenames": validation_supporting_filenames
+        }
+    }
+    # 2. Open Unix socket connection
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        s.connect(socket_path)
+        
+        # Send request payload
+        s.sendall(json.dumps(request_payload).encode('utf-8'))
+        
+        # Read response bytes until EOF (one-shot response)
+        response_bytes = b""
+        while True:
+            chunk = s.recv(4096)
+            if not chunk:
+                break
+            response_bytes += chunk
+    # 3. Parse and check the IPCResponse
+    response_data = json.loads(response_bytes.decode('utf-8'))
+    if response_data.get("status") == "success":
+        return response_data.get("result", False)
+    else:
+        raise RuntimeError(f"IPC Server Error: {response_data.get('error')}")
+
 
 class CsvRegionalTimeseriesVerificationService():
     def __init__(
@@ -536,7 +582,13 @@ class CsvRegionalTimeseriesVerificationService():
         print(f"🎉 Parquet-based sorting and CSV export completed in {time.time() - t_start:.2f}s")
 
 
-        replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
+        # replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
+
+        from pathlib import Path
+
+        Path(self.temp_sorted_filepath).replace(
+            Path(self.filename)
+        )
         print('File replaced')
 
         
@@ -547,11 +599,17 @@ class CsvRegionalTimeseriesVerificationService():
         else:
             s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[1:])
         
-        with open(f"{self.temp_sorted_filepath}.parquet", "rb") as file_stream:
-            uploaded_parquet_bucket_object_id = self.project_service.add_filestream_as_validation_supporter(
-                s3_parquet_filename,
-                file_stream,
-            )
+        # with open(f"{self.temp_sorted_filepath}.parquet", "rb") as file_stream:
+        #     uploaded_parquet_bucket_object_id = self.project_service.add_filestream_as_validation_supporter(
+        #         s3_parquet_filename,
+        #         file_stream,
+        #     )
+
+        import shutil
+        shutil.copy2(
+            Path(f"{self.temp_sorted_filepath}.parquet"),
+            Path(f"{self.filename}.parquet")
+        )
 
             
         # Monkey patch serializer
@@ -564,11 +622,11 @@ class CsvRegionalTimeseriesVerificationService():
         # Monkey patch serializer
 
 
-        self.project_service.register_validation(
-            replaced_bucket_object_id,
-            self.dataset_template_id,
+        register_validation_via_ipc(
+            self.original_filepath,
+            int(self.dataset_template_id),
             self.validation_metadata,
-            [uploaded_parquet_bucket_object_id]
+            [f"{self.original_filepath}.parquet"]
         )
         print('Validation complete')
 

@@ -2,4 +2,3 @@ jsonschema==4.19.2
 pyarrow==20.0.0
 pandas==2.2.3
 click
-git+https://github.com/iiasa/accli.git@673f70c
