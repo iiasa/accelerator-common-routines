@@ -1,75 +1,80 @@
 FROM python:3.10.4
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
-
-COPY ./csv_regional_timeseries_validator/requirements.txt /code/requirements.txt
-
-RUN pip install -r /code/requirements.txt
-
-COPY ./csv_regional_timeseries_validator/ /code
-
 WORKDIR /code
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Write and install the self-signed certificates inline (Backend and MinIO)
-RUN mkdir -p /agent && cat <<'EOF' > /agent/backend.crt
------BEGIN CERTIFICATE-----
-MIIDTjCCAjagAwIBAgIUUoX42wkhoDF3vUzvKFKQj8xKOtgwDQYJKoZIhvcNAQEL
-BQAwEjEQMA4GA1UEAwwHbG9jYWxpcDAeFw0yNjA2MTcyMDI0MDdaFw0zNjA2MTQy
-MDI0MDdaMBIxEDAOBgNVBAMMB2xvY2FsaXAwggEiMA0GCSqGSIb3DQEBAQUAA4IB
-DwAwggEKAoIBAQDRoDu72iCXd/77X4dVRQ5Gj49MSui5ilKqrZDEMSxCpKzr+MzY
-nahWXY4SsYxsF6wRd/eRz29F05zNia6PC+IwNXbYRiCrC4PT21/5+wnKAhv4qmMi
-ZyKwTFQbRbIUp2ijKda6IUkxt/Z0sWgAQSdvKEjxMvHgS5U1UeVyeSNv8iGo1EeM
-2My9BzS+fpzuhZ5yYTs/keOqbykDsFocelDGWZAVPwl2i9Luo4odrsJ+7zX9pNII
-eQAODo/ugkDAVWJmFLFEv9Jt8UtZHY3cyALwhte5hzUpAHhBA3AeUyPJeARDbfau
-aRbnlkyjhQ+bTtE49kdBRnpMy8oNC2XRfw+tAgMBAAGjgZswgZgwHQYDVR0OBBYE
-FBtyg/fHEjZDxa3ESHaWFuLAvOtYMB8GA1UdIwQYMBaAFBtyg/fHEjZDxa3ESHaW
-FuLAvOtYMCMGA1UdEQQcMBqCB2xvY2FsaXCCCWxvY2FsaG9zdIcEfwAAATAMBgNV
-HRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAN
-BgkqhkiG9w0BAQsFAAOCAQEAgLTvvYWeb3VuwKLYz3d2tlCbjGus3WPjBHS5aLtY
-0xmCHqX7aQi6BiJeek2jbusSMgVFhAR2a7XUyvvGtE1LBNIiiv0jDgbqYsW615eE
-NlyQv4QGezf2YMKcUAzVkrlX4QsF4JZdXMlTgzdX8gRJuDmc0NaEEd1I6fi58gvN
-/XPUF5HqpIZBPWB7WHGrfRoKQ0IGjdfdXZZEgZSbE0as8YNGtuKgzJHQIP7+HPvj
-PFDxcKJhlPwy1lywHCJPK01AQfjTwLemrwpiMXZ4WosBhy/yo0vvSNXUNhp/zzt8
-69voLIGGOPjLrQnog1wJPDd11obZegx4nVHq6ar3YH+GUQ==
------END CERTIFICATE-----
-EOF
+COPY csv_regional_timeseries_validator/requirements.txt ./requirements.txt
 
-RUN cat <<'EOF' > /agent/minio.crt
------BEGIN CERTIFICATE-----
-MIIEzTCCA7WgAwIBAgIUe88S98iszU8TxVQL7fQhi48wKXgwDQYJKoZIhvcNAQEL
-BQAwfjELMAkGA1UEBhMCQVUxDTALBgNVBAgMBFdpZW4xDTALBgNVBAcMBFdpZW4x
-EDAOBgNVBAoMB0JhYmJsZXIxCzAJBgNVBAsMAklUMRAwDgYDVQQDDAdsb2NhbGlw
-MSAwHgYJKoZIhvcNAQkBFhF3cnVmZXNoQGdtYWlsLmNvbTAeFw0yNjA1MTkyMDEz
-MjRaFw0zNjA1MTYyMDEzMjRaMH4xCzAJBgNVBAYTAkFVMQ0wCwYDVQQIDARXaWVu
-MQ0wCwYDVQQHDARXaWVuMRAwDgYDVQQKDAdCYWJibGVyMQswCQYDVQQLDAJJVDEQ
-MA4GA1UEAwwHbG9jYWxpcDEgMB4GCSqGSIb3DQEJARYRd3J1ZmVzaEBnbWFpbC5j
-b20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCgzrLzoqIy2nIV5C5n
-RJzxETJQGEqtAJIoQiHVgxTMJ83RT2FhKO15ClIApGt5973qvxambKquAkf5e9qj
-f7Iit64UmEQzSPCLcTwLJukJD6jpNcHbSTtwySI9Ox+1kYzeuYitbWmg54DiIwIJ
-3WApuI8/5yIwc9OQmUYX8aFxTIJG3DxmRosecwW7ha/vquPpRvwKbxh+Thr5irds
-ELrNHRM8bB6O9HQD9KZADxPoH2ERaYjWBICjUr1UQqNzFsY8Cqk1uXSWIJ6cEhm8
-MvodZV/CKs3sJwsUaGMsLLUS4TZ4ubVEnfEKKm/pVEwVcAqtiDed/NcPKXuEZMaj
-yZVBAgMBAAGjggFBMIIBPTAdBgNVHQ4EFgQUaB+ScvBCTu8bDoRuF6J4ow1QaHow
-HwYDVR0jBBgwFoAUaB+ScvBCTu8bDoRuF6J4ow1QaHowCQYDVR0TBAIwADALBgNV
-HQ8EBAMCBaAwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMIHDBgNVHREE
-gbswgbiCCWxvY2FsaG9zdIIHbG9jYWxpcIIFbWluaW+CCHJlZ2lzdHJ5ggZ3ZWJf
-YmWCHmx1bWV4cC1sb2NhbC5hY2Ntcy5paWFzYS5hYy5hdIIcbHVtZXhwLWxvYy5h
-Y2Ntcy5paWFzYS5hYy5hdIIPbHBkLmlpYXNhLmFjLmF0gg9hZG1pbi5sb2NhbGhv
-c3SCEXRlbmFudDEubG9jYWxob3N0ggpsb2NhbHJlY29uhwR/AAABhwQKAACNMA0G
-CSqGSIb3DQEBCwUAA4IBAQCCc9RQ/RFKO/mHhJNcPmEwBJVOl1l7rH08kkMvJ+8d
-6BTVv63EV+94R/scuOx78tUcbEweUmApIxpc/pRSGjY7vN9WILGEmTJtnOS1gPpO
-+3ieZYLtJ12osV34OEoS9o8XTHLNALtdCY+YOkgjQY5dCbQSySHrEKXJeo331QWu
-e3jvI/PjBtmuwnK3Bhwxb9WwVdIf5DBDx8V6BkHytykLZVr4UHIRB7y7fkAqcHTu
-u4Osx4cDLsp7QXTyq9inzSBVGlSDo/DfocO0Om8pvRD2E/jjz5L6dRdHf6/+tpZG
-NUYknrHgkoZ0ibwV2J9H5hBmfeWvtzEJQvlEghxpmbo1
------END CERTIFICATE-----
-EOF
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
-RUN cat /etc/ssl/certs/ca-certificates.crt /agent/backend.crt /agent/minio.crt > /agent/ca_bundle.pem && \
-    cat /agent/backend.crt /agent/minio.crt >> /etc/ssl/certs/ca-certificates.crt
+COPY csv_regional_timeseries_validator/ .
 
-RUN chmod -R +x /agent/wagt /agent/ssh /agent/xet_python/bin/
+RUN mkdir -p /agent
 
-# Set SSL_CERT_FILE so python and rust applications respect the combined bundle
+RUN printf '%s\n' \
+'-----BEGIN CERTIFICATE-----' \
+'MIIDTjCCAjagAwIBAgIUUoX42wkhoDF3vUzvKFKQj8xKOtgwDQYJKoZIhvcNAQEL' \
+'BQAwEjEQMA4GA1UEAwwHbG9jYWxpcDAeFw0yNjA2MTcyMDI0MDdaFw0zNjA2MTQy' \
+'MDI0MDdaMBIxEDAOBgNVBAMMB2xvY2FsaXAwggEiMA0GCSqGSIb3DQEBAQUAA4IB' \
+'DwAwggEKAoIBAQDRoDu72iCXd/77X4dVRQ5Gj49MSui5ilKqrZDEMSxCpKzr+MzY' \
+'nahWXY4SsYxsF6wRd/eRz29F05zNia6PC+IwNXbYRiCrC4PT21/5+wnKAhv4qmMi' \
+'ZyKwTFQbRbIUp2ijKda6IUkxt/Z0sWgAQSdvKEjxMvHgS5U1UeVyeSNv8iGo1EeM' \
+'2My9BzS+fpzuhZ5yYTs/keOqbykDsFocelDGWZAVPwl2i9Luo4odrsJ+7zX9pNII' \
+'eQAODo/ugkDAVWJmFLFEv9Jt8UtZHY3cyALwhte5hzUpAHhBA3AeUyPJeARDbfau' \
+'aRbnlkyjhQ+bTtE49kdBRnpMy8oNC2XRfw+tAgMBAAGjgZswgZgwHQYDVR0OBBYE' \
+'FBtyg/fHEjZDxa3ESHaWFuLAvOtYMB8GA1UdIwQYMBaAFBtyg/fHEjZDxa3ESHaW' \
+'FuLAvOtYMCMGA1UdEQQcMBqCB2xvY2FsaXCCCWxvY2FsaG9zdIcEfwAAATAMBgNV' \
+'HRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAN' \
+'BgkqhkiG9w0BAQsFAAOCAQEAgLTvvYWeb3VuwKLYz3d2tlCbjGus3WPjBHS5aLtY' \
+'0xmCHqX7aQi6BiJeek2jbusSMgVFhAR2a7XUyvvGtE1LBNIiiv0jDgbqYsW615eE' \
+'NlyQv4QGezf2YMKcUAzVkrlX4QsF4JZdXMlTgzdX8gRJuDmc0NaEEd1I6fi58gvN' \
+'/XPUF5HqpIZBPWB7WHGrfRoKQ0IGjdfdXZZEgZSbE0as8YNGtuKgzJHQIP7+HPvj' \
+'PFDxcKJhlPwy1lywHCJPK01AQfjTwLemrwpiMXZ4WosBhy/yo0vvSNXUNhp/zzt8' \
+'69voLIGGOPjLrQnog1wJPDd11obZegx4nVHq6ar3YH+GUQ==' \
+'-----END CERTIFICATE-----' \
+> /agent/backend.crt
+
+RUN printf '%s\n' \
+'-----BEGIN CERTIFICATE-----' \
+'MIIEzTCCA7WgAwIBAgIUe88S98iszU8TxVQL7fQhi48wKXgwDQYJKoZIhvcNAQEL' \
+'BQAwfjELMAkGA1UEBhMCQVUxDTALBgNVBAgMBFdpZW4xDTALBgNVBAcMBFdpZW4x' \
+'EDAOBgNVBAoMB0JhYmJsZXIxCzAJBgNVBAsMAklUMRAwDgYDVQQDDAdsb2NhbGlw' \
+'MSAwHgYJKoZIhvcNAQkBFhF3cnVmZXNoQGdtYWlsLmNvbTAeFw0yNjA1MTkyMDEz' \
+'MjRaFw0zNjA1MTYyMDEzMjRaMH4xCzAJBgNVBAYTAkFVMQ0wCwYDVQQIDARXaWVu' \
+'MQ0wCwYDVQQHDARXaWVuMRAwDgYDVQQKDAdCYWJibGVyMQswCQYDVQQLDAJJVDEQ' \
+'MA4GA1UEAwwHbG9jYWxpcDEgMB4GCSqGSIb3DQEJARYRd3J1ZmVzaEBnbWFpbC5j' \
+'b20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCgzrLzoqIy2nIV5C5n' \
+'RJzxETJQGEqtAJIoQiHVgxTMJ83RT2FhKO15ClIApGt5973qvxambKquAkf5e9qj' \
+'f7Iit64UmEQzSPCLcTwLJukJD6jpNcHbSTtwySI9Ox+1kYzeuYitbWmg54DiIwIJ' \
+'3WApuI8/5yIwc9OQmUYX8aFxTIJG3DxmRosecwW7ha/vquPpRvwKbxh+Thr5irds' \
+'ELrNHRM8bB6O9HQD9KZADxPoH2ERaYjWBICjUr1UQqNzFsY8Cqk1uXSWIJ6cEhm8' \
+'MvodZV/CKs3sJwsUaGMsLLUS4TZ4ubVEnfEKKm/pVEwVcAqtiDed/NcPKXuEZMaj' \
+'yZVBAgMBAAGjggFBMIIBPTAdBgNVHQ4EFgQUaB+ScvBCTu8bDoRuF6J4ow1QaHow' \
+'HwYDVR0jBBgwFoAUaB+ScvBCTu8bDoRuF6J4ow1QaHowCQYDVR0TBAIwADALBgNV' \
+'HQ8EBAMCBaAwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMIHDBgNVHREE' \
+'gbswgbiCCWxvY2FsaG9zdIIHbG9jYWxpcIIFbWluaW+CCHJlZ2lzdHJ5ggZ3ZWJf' \
+'YmWCHmx1bWV4cC1sb2NhbC5hY2Ntcy5paWFzYS5hYy5hdIIcbHVtZXhwLWxvYy5h' \
+'Y2Ntcy5paWFzYS5hYy5hdIIPbHBkLmlpYXNhLmFjLmF0gg9hZG1pbi5sb2NhbGhv' \
+'c3SCEXRlbmFudDEubG9jYWxob3N0ggpsb2NhbHJlY29uhwR/AAABhwQKAACNMA0G' \
+'CSqGSIb3DQEBCwUAA4IBAQCCc9RQ/RFKO/mHhJNcPmEwBJVOl1l7rH08kkMvJ+8d' \
+'6BTVv63EV+94R/scuOx78tUcbEweUmApIxpc/pRSGjY7vN9WILGEmTJtnOS1gPpO' \
+'+3ieZYLtJ12osV34OEoS9o8XTHLNALtdCY+YOkgjQY5dCbQSySHrEKXJeo331QWu' \
+'e3jvI/PjBtmuwnK3Bhwxb9WwVdIf5DBDx8V6BkHytykLZVr4UHIRB7y7fkAqcHTu' \
+'u4Osx4cDLsp7QXTyq9inzSBVGlSDo/DfocO0Om8pvRD2E/jjz5L6dRdHf6/+tpZG' \
+'NUYknrHgkoZ0ibwV2J9H5hBmfeWvtzEJQvlEghxpmbo1' \
+'-----END CERTIFICATE-----' \
+> /agent/minio.crt
+
+RUN cat /etc/ssl/certs/ca-certificates.crt \
+        /agent/backend.crt \
+        /agent/minio.crt \
+    > /agent/ca_bundle.pem && \
+    cat /agent/backend.crt /agent/minio.crt \
+    >> /etc/ssl/certs/ca-certificates.crt
+
+RUN chmod -R +x /agent/wagt /agent/ssh /agent/xet_python/bin/ || true
+
 ENV SSL_CERT_FILE=/agent/ca_bundle.pem
