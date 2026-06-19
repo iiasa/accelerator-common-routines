@@ -10,7 +10,6 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from typing import Optional
-from accli import AjobCliService
 from jsonschema import validate as jsonschema_validate
 from jsonschema.exceptions import ValidationError, SchemaError
 
@@ -131,13 +130,7 @@ class CsvRegionalTimeseriesVerificationService():
         disk_required=6 * 1024**3,
         cores_required=1,
         original_filepath: Optional[str]=None
-    ):
-        
-        self.project_service = AjobCliService(
-            job_token,
-            server_url=os.environ.get('ACC_JOB_GATEWAY_SERVER'),
-            verify_cert=False
-        )   
+    ):   
 
         self.dataset_template_id = dataset_template_id
 
