@@ -10,6 +10,11 @@ for filepath in filepaths:
     
     print(f"_____________Validating file: {filepath} _____________")
 
+    # pringt files and dirs recursively in currect working dir
+    for dirpath, dirnames, filenames in os.walk("."):
+        for filename in filenames:
+            print(os.path.join(dirpath, filename))
+
     csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
         # filename=f"/mnt/wdrv/{filepath}",
         filename=f"inputs/{filepath.split('/')[-1]}",
