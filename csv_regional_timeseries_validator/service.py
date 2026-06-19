@@ -577,12 +577,12 @@ class CsvRegionalTimeseriesVerificationService():
 
         # replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
 
-        from pathlib import Path
+        # from pathlib import Path
 
-        Path(self.temp_sorted_filepath).replace(
-            Path(self.filename)
-        )
-        print('File replaced')
+        # Path(self.temp_sorted_filepath).replace(
+        #     Path(self.filename)
+        # )
+        # print('File replaced')
 
         
         s3_parquet_filename = f"{self.original_filepath}.parquet"
@@ -598,11 +598,11 @@ class CsvRegionalTimeseriesVerificationService():
         #         file_stream,
         #     )
 
-        import shutil
-        shutil.copy2(
-            Path(f"{self.temp_sorted_filepath}.parquet"),
-            Path(f"{self.filename}.parquet")
-        )
+        # import shutil
+        # shutil.copy2(
+        #     Path(f"{self.temp_sorted_filepath}.parquet"),
+        #     Path(f"{self.filename}.parquet")
+        # )
 
             
         # Monkey patch serializer

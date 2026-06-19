@@ -11,7 +11,8 @@ for filepath in filepaths:
     print(f"_____________Validating file: {filepath} _____________")
 
     csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
-        filename=f"/mnt/wdrv/{filepath}",
+        # filename=f"/mnt/wdrv/{filepath}",
+        filename=f"inputs/{filepath.split('/')[-1]}",
         dataset_template_id=os.environ.get('dataset_template_id'),
         job_token=os.environ.get('ACC_JOB_TOKEN'),
         original_filepath=filepath
