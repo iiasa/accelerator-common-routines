@@ -176,7 +176,15 @@ class CsvRegionalTimeseriesVerificationService():
         }
 
     def set_csv_regional_validation_rules(self):
-        dataset_template_details = self.project_service.get_dataset_template_details(self.dataset_template_id)
+        import requests
+        
+        base_url = os.environ.get('ACCELERATOR_CLI_BASE_URL', '').rstrip('/')
+        url = f"{base_url}/api/v1/ajob-cli/dataset-template-detail/{self.dataset_template_id}/"
+        
+        response = requests.get(url, verify=False)
+        response.raise_for_status()
+        dataset_template_details = response.json()
+            
         self.rules =  dataset_template_details.get('rules')
 
 
@@ -415,14 +423,6 @@ class CsvRegionalTimeseriesVerificationService():
         for _ in passed_rows:
             pass
         
-
-    def replace_file_content(self, local_file_path):
-        with open(local_file_path, "rb") as file_stream:
-            bucket_object_id = self.project_service.replace_bucket_object_id_content(
-                self.original_filepath,
-                file_stream,
-            )
-            return bucket_object_id
     
     def delete_local_file(self, filepath):
         if os.path.exists(filepath):
