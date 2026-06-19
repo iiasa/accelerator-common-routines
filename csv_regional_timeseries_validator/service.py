@@ -171,7 +171,7 @@ class CsvRegionalTimeseriesVerificationService():
     def set_csv_regional_validation_rules(self):
         import requests
         
-        base_url = os.environ.get('ACCELERATOR_CLI_BASE_URL', '').rstrip('/')
+        base_url = os.environ.get('ACC_JOB_GATEWAY_SERVER', '').rstrip('/')
         url = f"{base_url}/api/v1/ajob-cli/dataset-template-detail/{self.dataset_template_id}/"
         
         response = requests.get(url, verify=False)
