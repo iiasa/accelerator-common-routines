@@ -107,7 +107,10 @@ def register_validation_via_ipc(
         payload_bytes = json.dumps(request_payload).encode('utf-8')
         print(f"[DEBUG] Sending {len(payload_bytes)} bytes of payload...")
         s.sendall(payload_bytes)
-        print("[DEBUG] Payload sent. Waiting for response...")
+        
+        # CRITICAL: Shut down the write half of the socket to signal EOF to the Go server's io.ReadAll
+        s.shutdown(socket.SHUT_WR)
+        print("[DEBUG] Payload sent and write-half shut down. Waiting for response...")
         
         # Read response bytes until EOF (one-shot response)
         response_bytes = b""
@@ -120,6 +123,7 @@ def register_validation_via_ipc(
             if not chunk:
                 break
             response_bytes += chunk
+            
     # 3. Parse and check the IPCResponse
     print(f"[DEBUG] Response read completely. Parsing response...")
     response_data = json.loads(response_bytes.decode('utf-8'))
