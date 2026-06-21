@@ -84,7 +84,6 @@ def register_validation_via_ipc(
     Communicates with the parent wagt agent over the Unix socket to register validation.
     """
     socket_path = "/tmp/wagt.sock"
-    print(f"[DEBUG] Checking if socket path exists: {socket_path}")
     if not os.path.exists(socket_path):
         raise FileNotFoundError(f"IPC Unix socket not found at {socket_path}. Is the agent running?")
     # 1. Structure the request matching the Go IPCRequest format
@@ -98,36 +97,26 @@ def register_validation_via_ipc(
         }
     }
     # 2. Open Unix socket connection
-    print(f"[DEBUG] Connecting to Unix socket at {socket_path}...")
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
         s.connect(socket_path)
-        print("[DEBUG] Connected. Sending payload...")
         
         # Send request payload
         payload_bytes = json.dumps(request_payload).encode('utf-8')
-        print(f"[DEBUG] Sending {len(payload_bytes)} bytes of payload...")
         s.sendall(payload_bytes)
         
         # CRITICAL: Shut down the write half of the socket to signal EOF to the Go server's io.ReadAll
         s.shutdown(socket.SHUT_WR)
-        print("[DEBUG] Payload sent and write-half shut down. Waiting for response...")
         
         # Read response bytes until EOF (one-shot response)
         response_bytes = b""
-        chunk_count = 0
         while True:
-            chunk_count += 1
-            print(f"[DEBUG] Reading chunk #{chunk_count} from socket...")
             chunk = s.recv(4096)
-            print(f"[DEBUG] Read chunk #{chunk_count}: {len(chunk)} bytes")
             if not chunk:
                 break
             response_bytes += chunk
             
     # 3. Parse and check the IPCResponse
-    print(f"[DEBUG] Response read completely. Parsing response...")
     response_data = json.loads(response_bytes.decode('utf-8'))
-    print(f"[DEBUG] Response status: {response_data.get('status')}")
     if response_data.get("status") == "success":
         return response_data.get("result", False)
     else:
@@ -630,18 +619,12 @@ class CsvRegionalTimeseriesVerificationService():
         json.JSONEncoder.default = monkey_patched_json_encoder_default
         # Monkey patch serializer
 
-        print("[DEBUG] Calling register_validation_via_ipc...")
-        print(f"[DEBUG] original_filepath: {self.original_filepath}")
-        print(f"[DEBUG] dataset_template_id: {self.dataset_template_id}")
-        print(f"[DEBUG] validation_metadata keys: {list(self.validation_metadata.keys()) if isinstance(self.validation_metadata, dict) else 'Not a dict'}")
-        
-        result = register_validation_via_ipc(
+        register_validation_via_ipc(
             self.original_filepath,
             int(self.dataset_template_id),
             self.validation_metadata,
             [f"{self.original_filepath}.parquet"]
         )
-        print(f"[DEBUG] register_validation_via_ipc completed with result: {result}")
         print('Validation complete')
 
    
