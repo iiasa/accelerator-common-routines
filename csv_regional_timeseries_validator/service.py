@@ -539,7 +539,6 @@ class CsvRegionalTimeseriesVerificationService():
         print("Sorting and generating CSV using Parquet...")
         import pyarrow.compute as pc
         import pyarrow.csv as pa_csv
-        import time
 
         t_start = time.time()
         parquet_filepath = self.temp_sorted_filepath + '.parquet'
