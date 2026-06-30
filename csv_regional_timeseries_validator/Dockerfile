@@ -12,39 +12,27 @@ RUN python -m pip install --no-cache-dir -r requirements.txt
 
 COPY csv_regional_timeseries_validator/ .
 
+RUN chown -R :0 /code && chmod -R g+rwX /code
+
 RUN mkdir -p /agent
 
 RUN printf '%s\n' \
     '-----BEGIN CERTIFICATE-----' \
-    'MIIFTTCCAzWgAwIBAgIUHq5cxPpTOQ7OzMqdPU2N6RFd+6YwDQYJKoZIhvcNAQEL' \
-    'BQAwEjEQMA4GA1UEAwwHbG9jYWxpcDAeFw0yNjA2MjIxODU3NThaFw0yOTAzMTgx' \
-    'ODU3NThaMBIxEDAOBgNVBAMMB2xvY2FsaXAwggIiMA0GCSqGSIb3DQEBAQUAA4IC' \
-    'DwAwggIKAoICAQDCohwUnLxzt8WfRmPnZRiuKNQ0MXrAAGBOnIWF2yj+PZnsft8E' \
-    'ncHkkecZYSicQzxo7DJ322TwE9L+LCfqg9sd6id8p8G0mYmOABxmMgyEoxHEHl9J' \
-    'jlDNvpKL22ztHoPquxIZsnXrvXMeU/fegX4UBQrjojxCVdXAxkb9cZsgJ5Pz5Avp' \
-    'rmVJXNbSGg5URLvZSUIQ7ZJ3uBwTsbug9B+SIaQYoUxjEi1AaRkMhRPvzSrIZKG5' \
-    'MSLynfvbERx7X5yKMfRAPHxO9TM3tFn9S7MYJvr2dCQm0HrtEe2iLS6H0t4zb5Pm' \
-    'kKAHi0wEi/B9pclFQeySbL9g+i2bn88JQCqhiEACkruIXRCrcUO442UcO1EifTjU' \
-    '/8BQdCPnn3wBOYzrNDPGZ+ac+m9kPUJNjVRQClub4IC9q+v4Sl4knavG/hYvBojh' \
-    '4uDd9a2a+bcuDeNSGHR49zWcb+UJutakEw4NRzf2jcRsm3VhUm2vZmjEjvtE4f5r' \
-    '9ePwTs3DRONqm8eDG0GSrMfjb4ema9G3oI69SdKfb2I36N5+f/h6qm9vuk2hkVbi' \
-    'PiZsGj6M1maD8CB4vIfxrrSmOWY22+TWsa/D1U6v9LHcqwXcTXAbzba+isingRQ3' \
-    'vWoaceO3dh8Hwqw10MyFxI7q8H698xugvp4y1+PXdDX5Px406kA6WvkgFQIDAQAB' \
-    'o4GaMIGXMB0GA1UdDgQWBBQuNbYOn+Le4FaMd4Gb+t+1cUgpuTAfBgNVHSMEGDAW' \
-    'gBQuNbYOn+Le4FaMd4Gb+t+1cUgpuTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQE' \
-    'AwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAiBgNVHREEGzAZgglsb2NhbGhvc3SC' \
-    'BndlYl9iZYcEfwAAATANBgkqhkiG9w0BAQsFAAOCAgEAojHB3LvAJeEr1pQdphk0' \
-    'YXac3A2xRBSTJAQQ1FsyvJ7lm/IwSWCb4V4o/Zv5hNdO3L4S4kDJY3d6gO/LfZZI' \
-    'DiCaeGt46mDPUgH1BjNbhDpNEz1suozGWZaQbZj1cAxme23crlXudi4dfF0jdiSJ' \
-    'lpNNrXQG2VDnNvzl1Q2ymM0mEmSqaeay1kMkImAnoY8zknyEsKvSHAgJaZAO6dW3' \
-    'WrXkgpy3NLBmTwYo6gUW7qgzpPOjBIkent+WgYBysnwnIRSE6jrXxzqdFYGrxPRm' \
-    'Z54ErQxoNIo2wgROOnwYgh/ULFl11j91X3ZBXU+YJbVtc1yoh4uqn8vxADsR5X84' \
-    '59WCr9j1iphZAVWs8sGTZxz7BLSBjYWdsToQW4BQLUhsfQroEpxihXdD2uIVIcAa' \
-    'LXH3Ua/Qo/aa2+wek87DsYKFc+jvmnTeU+YhcN3vFhrEo/8/sPg9BAb1v7LLSe5B' \
-    'KGoN2n29ufHzQ95gI70NqdMk+WSFWC+fYXQroDBSuiESqMQ+KaLYNeQlpW+pKyfQ' \
-    'Gj7tsQLZck0il5oM/2GEhcTc2zU/lcXDIPW6nXF9CQLbGBkw/0y39ifjD/MbrKhW' \
-    'tJuSylid1uD0DaEd7dMBRWpaf0ZrgUaheoruP4AVrwe3ovKBRSiBwWchycU647T9' \
-    'YcyrRxa6H1DP6+7L4gDNkyI=' \
+    'MIICqzCCAZMCFD7v0fyO16FvxEZxjgzmzv+CySSeMA0GCSqGSIb3DQEBCwUAMBIx' \
+    'EDAOBgNVBAMMB2xvY2FsaXAwHhcNMjYwNjMwMDgyMjA1WhcNMzYwNjI3MDgyMjA1' \
+    'WjASMRAwDgYDVQQDDAdsb2NhbGlwMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB' \
+    'CgKCAQEAtRqALZgE6xRaL9P9GPdxuUt9mA2Z2aQTJavIDLfrGkHOk3RScrj6/8VC' \
+    '/KxbevPKwHXt3vn3HrQfukefrPXw1ybuwbrFvChTgH29HdxJWEITTClRz8kkIu4r' \
+    'zdF1BmCytJapTyfYZyFvMCfKqPZqO+BxGxT6avPYkKJ3XVYjiLBowLgVDlWDOFlz' \
+    '+vsK+Tej30xIPOO+6iwAqz3wAlkZeJHKPeP8LhSskzcoIhm1hbxPyWbEZ0DmzjTQ' \
+    'KHQYLZoFYW/G9SmsyzU87HzLnNfXNyd7BdxCNF7XBWu3JwV/GkukeYc9sRSx7eRx' \
+    '4nC4e77T3tOGN7Gk8WkGacroEOICWQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAu' \
+    'eGAMM3xCcdvF+KYUWGa0nssox2soVFF6sDDKpXKwwzK7C+5IGZ3d8qRnJWGNvf5P' \
+    's3TUnvQND3FelKT+8AK8oUDh/ZkqBraJRrODegX5SgxMbQgcne14byof7R+VHykK' \
+    'CUXA/tw42dSn9yqJ6kpCGG8IOKw8c1S7Y+kSgCMmiCrR0P34jr9vJSJVtsB2FtvP' \
+    'qjkHda98Wh+cJ14k7xVPdMSqj6KZbabgjokhqIP6tUc78omJhMtyFCIQYKw1h1bk' \
+    'nRWi7vT5sYCniahRXcXKU/+Qn/IhRZVo4PLajqpF5QDLyP24eJisOvLfl3Y/fr4O' \
+    'V6Sjwdu5hp+39he8kc9b' \
     '-----END CERTIFICATE-----' \
     > /agent/backend.crt
 
@@ -87,5 +75,7 @@ RUN cat /etc/ssl/certs/ca-certificates.crt \
     >> /etc/ssl/certs/ca-certificates.crt
 
 RUN chmod -R +x /agent/wagt /agent/ssh /agent/xet_python/bin/ || true
+
+RUN chown -R :0 /agent && chmod -R g+rwX /agent
 
 ENV SSL_CERT_FILE=/agent/ca_bundle.pem
