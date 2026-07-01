@@ -84,7 +84,7 @@ def register_validation_via_ipc(
     """
     Communicates with the parent wagt agent over the Unix socket to register validation.
     """
-    socket_path = "/tmp/wagt.sock"
+    socket_path = "/mnt/tmp/.wkube_agent/wagt.sock"
     if not os.path.exists(socket_path):
         raise FileNotFoundError(f"IPC Unix socket not found at {socket_path}. Is the agent running?")
     # 1. Structure the request matching the Go IPCRequest format
