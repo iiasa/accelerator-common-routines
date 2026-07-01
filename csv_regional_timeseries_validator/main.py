@@ -6,7 +6,10 @@ input_directory = 'inputs'
 filepaths = os.environ.get('selected_filenames', '').split(',')
 
 
+
 for filepath in filepaths:
+
+    rel_filepath = filepath.lstrip(os.environ.get('PROJECT_SLUG', '') + '/')
     
     print(f"_____________Validating file: {filepath} _____________")
 
@@ -16,13 +19,13 @@ for filepath in filepaths:
             print(os.path.join(dirpath, filename))
 
     csv_regional_timeseries_verification_service = CsvRegionalTimeseriesVerificationService(
-        filename=f"/mnt/wdrv/{filepath}",
+        filename=f"/mnt/wdrv/{rel_filepath}",
         # filename=f"inputs/{filepath.split('/')[-1]}",
         dataset_template_id=os.environ.get('dataset_template_id'),
         job_token=os.environ.get('ACC_JOB_TOKEN'),
-        original_filepath=filepath
+        original_filepath=rel_filepath
     )
 
     csv_regional_timeseries_verification_service()
 
-    print(f"_____________DONE: Validating file: {filepath} _____________")
+    print(f"_____________DONE: Validating file: {rel_filepath} _____________")
