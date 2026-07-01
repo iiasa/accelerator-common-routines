@@ -503,8 +503,6 @@ class CsvRegionalTimeseriesVerificationService():
     
                 
     def __call__(self):
-        print("Sleeping")
-        time.sleep(3600)
         self.set_csv_regional_validation_rules()
 
         self.init_validation_metadata()
