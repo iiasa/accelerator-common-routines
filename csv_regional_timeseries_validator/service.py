@@ -439,9 +439,6 @@ class CsvRegionalTimeseriesVerificationService():
                 df = pd.DataFrame(chunk)
                 df = self._process_dataframe(df)  # defined below
                 table = self._convert_to_arrow_table(df)
-                
-                print("Sleeping")
-                time.sleep(3600)
 
                 if parquet_writer is None:
                     parquet_writer = pq.ParquetWriter(
