@@ -508,132 +508,136 @@ class CsvRegionalTimeseriesVerificationService():
         self.set_csv_regional_validation_rules()
 
         self.init_validation_metadata()
-        
-        # try:
-        self.create_validated_file()
-        print('File validated against rules.')
-        # except Exception as err:
-        #     if len(self.errors) <= 50:
-        #         self.errors[str(err)] = str(err)
-        
-        if self.errors:
-            print("\n" + "!" * 80)
-            print("!!! INVALID DATA DETECTED !!!".center(80))
-            print("!" * 80)
-            for error_msg, row_data in self.errors.items():
-                print(f"\n--- ERROR ---")
-                print(f"Details: {error_msg}")
-                print(f"Row Data: {row_data}")
-            print("\n" + "!" * 80)
-            
-            self.delete_local_file(self.temp_validated_filepath)
-            print('Temporary validated file deleted')
-            raise ValueError("Invalid data: Data does not comply with template rules.")
-        
-        verify_only = True if os.environ.get('VERIFY_ONLY') in ['True', 'true', '1', 'TRUE'] else False
-        if verify_only:
-            print('Validation complete. Validation not registered in server as VERIFY_ONLY is set.')
-            return
+
+        temp_files = [
+            self.temp_validated_filepath,
+            self.temp_sorted_filepath,
+            f"{self.temp_sorted_filepath}.parquet",
+        ]
+
+        try:
+            self.create_validated_file()
+            print('File validated against rules.')
+
+            if self.errors:
+                print("\n" + "!" * 80)
+                print("!!! INVALID DATA DETECTED !!!".center(80))
+                print("!" * 80)
+                for error_msg, row_data in self.errors.items():
+                    print(f"\n--- ERROR ---")
+                    print(f"Details: {error_msg}")
+                    print(f"Row Data: {row_data}")
+                print("\n" + "!" * 80)
+                raise ValueError("Invalid data: Data does not comply with template rules.")
+
+            verify_only = True if os.environ.get('VERIFY_ONLY') in ['True', 'true', '1', 'TRUE'] else False
+            if verify_only:
+                print('Validation complete. Validation not registered in server as VERIFY_ONLY is set.')
+                return
 
 
-        print("Sorting and generating CSV using Parquet...")
-        import pyarrow.compute as pc
-        import pyarrow.csv as pa_csv
+            print("Sorting and generating CSV using Parquet...")
+            import pyarrow.compute as pc
+            import pyarrow.csv as pa_csv
 
-        t_start = time.time()
-        parquet_filepath = self.temp_sorted_filepath + '.parquet'
-        print(f"Loading Parquet file '{parquet_filepath}' into memory...")
-        table = pq.read_table(parquet_filepath)
-        print(f"✅ Loaded Parquet file in {time.time() - t_start:.2f}s")
+            t_start = time.time()
+            parquet_filepath = self.temp_sorted_filepath + '.parquet'
+            print(f"Loading Parquet file '{parquet_filepath}' into memory...")
+            table = pq.read_table(parquet_filepath)
+            print(f"✅ Loaded Parquet file in {time.time() - t_start:.2f}s")
 
-        # Select columns in the required order
-        table = table.select(self.validated_headers)
+            # Select columns in the required order
+            table = table.select(self.validated_headers)
 
-        # Build a temporary table containing indices of dictionary columns to sort efficiently without high memory usage
-        t_prep = time.time()
-        print("Preparing temporary table for sorting by dictionary indices...")
-        temp_columns = {}
-        for col_name in table.schema.names:
-            col = table.column(col_name)
-            if isinstance(col.type, pa.DictionaryType):
-                temp_columns[col_name] = col.combine_chunks().indices
+            # Build a temporary table containing indices of dictionary columns to sort efficiently without high memory usage
+            t_prep = time.time()
+            print("Preparing temporary table for sorting by dictionary indices...")
+            temp_columns = {}
+            for col_name in table.schema.names:
+                col = table.column(col_name)
+                if isinstance(col.type, pa.DictionaryType):
+                    temp_columns[col_name] = col.combine_chunks().indices
+                else:
+                    temp_columns[col_name] = col
+
+            temp_table = pa.Table.from_pydict(temp_columns)
+            print(f"✅ Prepared temporary table in {time.time() - t_prep:.2f}s")
+
+            # Sort by all validated headers except the value column and list-type columns
+            t_sort = time.time()
+            print("Sorting table in memory by indices...")
+            sort_keys = []
+            for col in self.validated_headers[:-1]:
+                col_type = table.schema.field(col).type
+                if pa.types.is_list(col_type) or pa.types.is_large_list(col_type):
+                    print(f"Skipping list-type column '{col}' from sort keys")
+                    continue
+                sort_keys.append((col, "ascending"))
+
+            sorted_indices = pc.sort_indices(temp_table, sort_keys=sort_keys)
+            sorted_table = table.take(sorted_indices)
+            print(f"✅ Sorted table in {time.time() - t_sort:.2f}s")
+
+            # Write directly to the sorted CSV
+            t_csv = time.time()
+            print("Writing sorted CSV...")
+            # Convert list columns back to their x-split string representation for CSV output
+            columns_to_cast = {}
+            for col_name in sorted_table.schema.names:
+                col_type = sorted_table.schema.field(col_name).type
+                if pa.types.is_list(col_type) or pa.types.is_large_list(col_type):
+                    prop = self.rules.get("root", {}).get("properties", {}).get(col_name, {})
+                    splitter = prop.get("x-split", ",")
+                    items = [sorted_table.column(col_name)]
+                    joined_strs = [splitter.join(x.as_py()) if x.as_py() else "" for x in items[0]]
+                    columns_to_cast[col_name] = pa.array(joined_strs, type=pa.string())
+            if columns_to_cast:
+                sorted_table = sorted_table.drop(list(columns_to_cast.keys()))
+                for name, arr in columns_to_cast.items():
+                    sorted_table = sorted_table.append_column(pa.field(name, pa.string()), arr)
+            pa_csv.write_csv(sorted_table, self.temp_sorted_filepath)
+            print(f"✅ Wrote sorted CSV in {time.time() - t_csv:.2f}s")
+            print(f"🎉 Parquet-based sorting and CSV export completed in {time.time() - t_start:.2f}s")
+
+            from pathlib import Path
+
+            Path(self.temp_sorted_filepath).replace(
+                Path(self.filename)
+            )
+            print('File replaced')
+
+            s3_parquet_filename = f"{self.original_filepath}.parquet"
+
+            if s3_parquet_filename.startswith("/"):
+                s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[2:])
             else:
-                temp_columns[col_name] = col
-        
-        temp_table = pa.Table.from_pydict(temp_columns)
-        print(f"✅ Prepared temporary table in {time.time() - t_prep:.2f}s")
+                s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[1:])
 
-        # Sort by all validated headers except the value column and list-type columns
-        t_sort = time.time()
-        print("Sorting table in memory by indices...")
-        sort_keys = []
-        for col in self.validated_headers[:-1]:
-            col_type = table.schema.field(col).type
-            if pa.types.is_list(col_type) or pa.types.is_large_list(col_type):
-                print(f"Skipping list-type column '{col}' from sort keys")
-                continue
-            sort_keys.append((col, "ascending"))
+            import shutil
+            shutil.copy2(
+                Path(f"{self.temp_sorted_filepath}.parquet"),
+                Path(f"{self.filename}.parquet")
+            )
 
-        sorted_indices = pc.sort_indices(temp_table, sort_keys=sort_keys)
-        sorted_table = table.take(sorted_indices)
-        print(f"✅ Sorted table in {time.time() - t_sort:.2f}s")
+            # Monkey patch serializer
+            def monkey_patched_json_encoder_default(encoder, obj):
+                if isinstance(obj, set):
+                    return list(obj)
+                return json.JSONEncoder.default(encoder, obj)
 
-        # Write directly to the sorted CSV
-        t_csv = time.time()
-        print("Writing sorted CSV...")
-        pa_csv.write_csv(sorted_table, self.temp_sorted_filepath)
-        print(f"✅ Wrote sorted CSV in {time.time() - t_csv:.2f}s")
-        print(f"🎉 Parquet-based sorting and CSV export completed in {time.time() - t_start:.2f}s")
+            json.JSONEncoder.default = monkey_patched_json_encoder_default
+            # Monkey patch serializer
 
+            register_validation_via_ipc(
+                self.original_filepath,
+                int(self.dataset_template_id),
+                self.validation_metadata,
+                [f"{self.original_filepath}.parquet"]
+            )
+            print('Validation complete')
 
-        # replaced_bucket_object_id = self.replace_file_content(self.temp_sorted_filepath)
-
-        from pathlib import Path
-
-        Path(self.temp_sorted_filepath).replace(
-            Path(self.filename)
-        )
-        print('File replaced')
-
-        
-        s3_parquet_filename = f"{self.original_filepath}.parquet"
-
-        if s3_parquet_filename.startswith("/"):
-            s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[2:])
-        else:
-            s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[1:])
-        
-        # with open(f"{self.temp_sorted_filepath}.parquet", "rb") as file_stream:
-        #     uploaded_parquet_bucket_object_id = self.project_service.add_filestream_as_validation_supporter(
-        #         s3_parquet_filename,
-        #         file_stream,
-        #     )
-
-        import shutil
-        shutil.copy2(
-            Path(f"{self.temp_sorted_filepath}.parquet"),
-            Path(f"{self.filename}.parquet")
-        )
-
-        # Delete the temporary Parquet file after copying
-        self.delete_local_file(f"{self.temp_sorted_filepath}.parquet")
-
-            
-        # Monkey patch serializer
-        def monkey_patched_json_encoder_default(encoder, obj):
-            if isinstance(obj, set):
-                return list(obj)
-            return json.JSONEncoder.default(encoder, obj)
-
-        json.JSONEncoder.default = monkey_patched_json_encoder_default
-        # Monkey patch serializer
-
-        register_validation_via_ipc(
-            self.original_filepath,
-            int(self.dataset_template_id),
-            self.validation_metadata,
-            [f"{self.original_filepath}.parquet"]
-        )
-        print('Validation complete')
+        finally:
+            for f in temp_files:
+                self.delete_local_file(f)
 
    
