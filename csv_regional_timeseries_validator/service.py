@@ -563,11 +563,15 @@ class CsvRegionalTimeseriesVerificationService():
         temp_table = pa.Table.from_pydict(temp_columns)
         print(f"✅ Prepared temporary table in {time.time() - t_prep:.2f}s")
 
-        # Sort by all validated headers except the value column
+        # Sort by all validated headers except the value column and list-type columns
         t_sort = time.time()
         print("Sorting table in memory by indices...")
         sort_keys = []
         for col in self.validated_headers[:-1]:
+            col_type = table.schema.field(col).type
+            if pa.types.is_list(col_type) or pa.types.is_large_list(col_type):
+                print(f"Skipping list-type column '{col}' from sort keys")
+                continue
             sort_keys.append((col, "ascending"))
 
         sorted_indices = pc.sort_indices(temp_table, sort_keys=sort_keys)
