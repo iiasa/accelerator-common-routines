@@ -603,14 +603,11 @@ class CsvRegionalTimeseriesVerificationService():
                 s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[1:])
 
 
-            print("Sleeping")
-            print(f"File to check:  {self.filename}.parquet")
-            time.sleep(3600)
-            import shutil
-            shutil.copy2(
-                Path(f"{self.temp_sorted_filepath}.parquet"),
-                Path(f"{self.filename}.parquet")
-            )
+            
+            dest = Path(f"{self.filename}.parquet")
+            if dest.exists():
+                dest.unlink()
+            Path(f"{self.temp_sorted_filepath}.parquet").rename(dest)
 
             # Monkey patch serializer
             def monkey_patched_json_encoder_default(encoder, obj):
