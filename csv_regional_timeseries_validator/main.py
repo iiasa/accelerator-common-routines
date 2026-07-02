@@ -23,7 +23,7 @@ for filepath in filepaths:
         # filename=f"inputs/{filepath.split('/')[-1]}",
         dataset_template_id=os.environ.get('dataset_template_id'),
         job_token=os.environ.get('ACC_JOB_TOKEN'),
-        original_filepath=rel_filepath
+        original_filepath=filepath
     )
 
     csv_regional_timeseries_verification_service()
