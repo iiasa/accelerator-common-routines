@@ -621,12 +621,12 @@ class CsvRegionalTimeseriesVerificationService():
         json.JSONEncoder.default = monkey_patched_json_encoder_default
         # Monkey patch serializer
 
-        register_validation_via_ipc(
-            self.original_filepath,
-            int(self.dataset_template_id),
-            self.validation_metadata,
-            [f"{self.original_filepath}.parquet"]
-        )
+        # register_validation_via_ipc(
+        #     self.original_filepath,
+        #     int(self.dataset_template_id),
+        #     self.validation_metadata,
+        #     [f"{self.original_filepath}.parquet"]
+        # )
         print('Validation complete')
 
    
