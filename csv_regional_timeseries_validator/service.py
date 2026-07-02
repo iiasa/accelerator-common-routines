@@ -1,12 +1,10 @@
 import json
 import os
 import re
-import subprocess
 import csv
 import uuid
 import itertools
 import time
-import socket
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -82,13 +80,16 @@ def register_validation_via_ipc(
     validation_supporting_filenames: list
 ) -> bool:
     """
-    Communicates with the parent wagt agent over the Unix socket to register validation.
+    Registers validation by appending the task payload to a JSON registry file
+    consumed by the parent wagt agent.
     """
-    socket_path = f"/mnt/tmp/.wkube_agent/{os.environ['POD_ID']}/wagt.sock"
-    if not os.path.exists(socket_path):
-        raise FileNotFoundError(f"IPC Unix socket not found at {socket_path}. Is the agent running?")
-    # 1. Structure the request matching the Go IPCRequest format
-    request_payload = {
+    pod_id = os.environ["POD_ID"]
+    registry_dir = f"/mnt/tmp/.wkube_agent/{pod_id}"
+    registry_path = f"{registry_dir}/post_task_registry.json"
+
+    os.makedirs(registry_dir, exist_ok=True)
+
+    entry = {
         "action": "register-validation-with-filename",
         "payload": {
             "validated_filename": validated_filename,
@@ -97,31 +98,19 @@ def register_validation_via_ipc(
             "validation_supporting_filenames": validation_supporting_filenames
         }
     }
-    # 2. Open Unix socket connection
-    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-        s.connect(socket_path)
-        
-        # Send request payload
-        payload_bytes = json.dumps(request_payload).encode('utf-8')
-        s.sendall(payload_bytes)
-        
-        # CRITICAL: Shut down the write half of the socket to signal EOF to the Go server's io.ReadAll
-        s.shutdown(socket.SHUT_WR)
-        
-        # Read response bytes until EOF (one-shot response)
-        response_bytes = b""
-        while True:
-            chunk = s.recv(4096)
-            if not chunk:
-                break
-            response_bytes += chunk
-            
-    # 3. Parse and check the IPCResponse
-    response_data = json.loads(response_bytes.decode('utf-8'))
-    if response_data.get("status") == "success":
-        return response_data.get("result", False)
+
+    if os.path.exists(registry_path):
+        with open(registry_path) as f:
+            registry = json.load(f)
     else:
-        raise RuntimeError(f"IPC Server Error: {response_data.get('error')}")
+        registry = []
+
+    registry.append(entry)
+
+    with open(registry_path, "w") as f:
+        json.dump(registry, f, indent=2)
+
+    return True
 
 
 class CsvRegionalTimeseriesVerificationService():
