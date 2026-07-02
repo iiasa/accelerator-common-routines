@@ -215,6 +215,7 @@ class CsvRegionalTimeseriesVerificationService():
                         )
                     # Apply splitting
                     row[field] = row[field].split(splitter) if row.get(field) else []
+                    print(f"Preprocessed field '{field}' with x-split '{splitter}': {row[field]}")
                 else:
                     raise ValueError(
                         f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
@@ -621,12 +622,12 @@ class CsvRegionalTimeseriesVerificationService():
         json.JSONEncoder.default = monkey_patched_json_encoder_default
         # Monkey patch serializer
 
-        # register_validation_via_ipc(
-        #     self.original_filepath,
-        #     int(self.dataset_template_id),
-        #     self.validation_metadata,
-        #     [f"{self.original_filepath}.parquet"]
-        # )
+        register_validation_via_ipc(
+            self.original_filepath,
+            int(self.dataset_template_id),
+            self.validation_metadata,
+            [f"{self.original_filepath}.parquet"]
+        )
         print('Validation complete')
 
    
