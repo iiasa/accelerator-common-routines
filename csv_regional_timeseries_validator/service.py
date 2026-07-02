@@ -611,6 +611,9 @@ class CsvRegionalTimeseriesVerificationService():
             Path(f"{self.filename}.parquet")
         )
 
+        # Delete the temporary Parquet file after copying
+        self.delete_local_file(f"{self.temp_sorted_filepath}.parquet")
+
             
         # Monkey patch serializer
         def monkey_patched_json_encoder_default(encoder, obj):
