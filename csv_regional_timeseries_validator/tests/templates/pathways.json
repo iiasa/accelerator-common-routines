@@ -1,0 +1,576 @@
+{
+  "root": {
+    "type": "object",
+    "required": [
+      "region",
+      "year",
+      "variable",
+      "units",
+      "value",
+      "item",
+      "model",
+      "scenario"
+    ],
+    "properties": {
+      "item": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "x-split": "|"
+      },
+      "year": {
+        "type": "number"
+      },
+      "model": {
+        "type": "string"
+      },
+      "units": {
+        "type": "string"
+      },
+      "value": {
+        "type": "number"
+      },
+      "region": {
+        "type": "string"
+      },
+      "scenario": {
+        "type": "string"
+      },
+      "variable": {
+        "type": "string"
+      }
+    }
+  },
+  "map_item": {
+    "fl": {
+      "name": "Forest Land",
+      "description": "The forest land carbon pool, covering 'forest land remaining forest land' as modelled through age-class dynamics and harvest volumes in GLOBIOM/G4M-X. Represents the biogenic carbon stored in and released from managed and unmanaged forest stands."
+    },
+    "all": {
+      "name": "All",
+      "description": "Aggregate total across all sub-categories of the given variable, representing the combined sum of all item components for a given model, scenario, region, and year."
+    },
+    "hwp": {
+      "name": "Harvested Wood Products",
+      "description": "Biogenic carbon stored in timber products after harvest (PgC or MtCO₂/yr), calculated using the IPCC production approach from FAOSTAT data and scenarios projections."
+    },
+    "area": {
+      "name": "Area Change",
+      "description": "Carbon flux associated with forest area change, encompassing both afforestation (carbon uptake as new forest grows) and deforestation (carbon release when forest is converted to other land uses), allocated at grid level relative to base year 2000."
+    },
+    "beccs": {
+      "name": "BECCS",
+      "description": "Permanent CO₂ removal (PgC or MtCO₂/yr) achieved by burning forestry biomass for energy and capturing the released CO₂ for geological storage. Deployment begins around 2040 and is calibrated to PRIMES energy model projections."
+    },
+    "stock": {
+      "name": "Stock",
+      "description": "Cumulative biogenic carbon stock (PgC) held in a specific pool at a given point in time. Used as a sub-category dimension to disaggregate total forest sector carbon storage across individual contributing pools."
+    },
+    "forest": {
+      "name": "Forest",
+      "description": "Total biogenic carbon stored in EU forest living biomass (PgC or MtCO₂/yr), modelled through age-class dynamics. Includes contributions from forest management and from afforestation/deforestation, and represents the largest single carbon pool in the forest sector."
+    },
+    "litter": {
+      "name": "Litter",
+      "description": "Net CO₂ flux (MtCO₂/yr) from the forest litter layer (dead organic matter with diameter <10 cm in G4M)."
+    },
+    "losses": {
+      "name": "Losses",
+      "description": "Biomass lossses due to Wood harvest "
+    },
+    "harvest": {
+      "name": "Harvest",
+      "description": "Annual roundwood and logging residues harvest volume (total biomass volume) from EU forests (Mm³/yr over bark), projected according to by GLOBIOM's market equilibrium optimisation. Harvest level is the primary link between bioeconomy demand scenarios and forest carbon stock outcomes."
+    },
+    "addsubst": {
+      "name": "Additional Substitution",
+      "description": "Additional avoided fossil CO₂ emissions (PgC or MtCO₂/yr ) resulting from increased substitution of fossil-based products by wood-based alternatives, calculated relative to the baseline scenario using product-specific displacement factors."
+    },
+    "deadwood": {
+      "name": "Deadwood",
+      "description": "Net CO₂ flux (MtCO₂/yr) from standing and fallen dead wood (diameter ≥10 cm in G4M)."
+    },
+    "emissions": {
+      "name": "Emissions",
+      "description": "Annual net CO₂ flux (MtCO₂/yr) from a specific carbon pool or mechanism. Negative values indicate net removals from the atmosphere. Used as a sub-category dimension to disaggregate total forest sector emissions across individual contributing pools."
+    },
+    "stat_corr": {
+      "name": "Statistical Correction",
+      "description": "Per-Member-State annual correction factor (MtCO₂/yr) bridging the gap between G4M-X modelled emissions (living biomass + deadwood + litter) and reported UNFCCC GHG inventory totals, which additionally include soil carbon. Applied as a constant offset throughout the projection period."
+    },
+    "employment": {
+      "name": "Employment",
+      "description": "Total number of people employed in the EU forest sector (millions), projected via the MAGNET emulator. Driven by wood demand levels and offset over time by rising labour productivity."
+    },
+    "value_added": {
+      "name": "Value Added",
+      "description": "Economic output generated by the EU forest sector (billion USD 2017), estimated via the MAGNET emulator. Grows with wood demand intensity but declines as a share of total GDP due to faster growth in other sectors."
+    },
+    "living biomass": {
+      "name": "Living Biomass",
+      "description": "Net CO₂ flux (MtCO₂/yr) from above- and below-ground living tree biomass, modelled through age-class dynamics."
+    },
+    "species_richness": {
+      "name": "Species Richness",
+      "description": "A biodiversity indicator (% change relative to baseline) derived from the iBIS.iSDM model, measuring the response of forest-dwelling species assemblages to changes in harvest intensity and management class distribution."
+    }
+  },
+  "map_model": {
+    "g4m": {
+      "name": "G4M",
+      "description": "A global forest management and land-use model that tracks carbon stock changes due to harvest and afforestation. Its enhanced version, G4M-X, further incorporates climate change impacts and disturbance-adaptive management at the grid-cell level."
+    },
+    "globiom": {
+      "name": "GLOBOIM",
+      "description": "A global recursive economic partial equilibrium land use model covering agriculture, forest, and bioenergy sectors. It generates environmental and socioeconomic indicators to support land-use policy assessment, and is coupled with G4M-X to capture forest management dynamics."
+    }
+  },
+  "map_region": {
+    "eu": {
+      "name": "EU (EU)",
+      "description": ""
+    },
+    "at00": {
+      "name": "Austria",
+      "description": ""
+    },
+    "be00": {
+      "name": "Belgium",
+      "description": ""
+    },
+    "bg00": {
+      "name": "Bulgaria",
+      "description": ""
+    },
+    "cy00": {
+      "name": "Cyprus",
+      "description": ""
+    },
+    "cz00": {
+      "name": "Czech Republic",
+      "description": ""
+    },
+    "de00": {
+      "name": "Germany",
+      "description": ""
+    },
+    "dk00": {
+      "name": "Denmark",
+      "description": ""
+    },
+    "ee00": {
+      "name": "Estonia",
+      "description": ""
+    },
+    "el00": {
+      "name": "Greece",
+      "description": ""
+    },
+    "es00": {
+      "name": "Spain",
+      "description": ""
+    },
+    "fi00": {
+      "name": "Finland",
+      "description": ""
+    },
+    "fr00": {
+      "name": "France",
+      "description": ""
+    },
+    "hr00": {
+      "name": "Croatia",
+      "description": ""
+    },
+    "hu00": {
+      "name": "Hungary",
+      "description": ""
+    },
+    "ie00": {
+      "name": "Ireland",
+      "description": ""
+    },
+    "it00": {
+      "name": "Italy",
+      "description": ""
+    },
+    "itc1": {
+      "name": "Italy (ITC1)",
+      "description": ""
+    },
+    "itc2": {
+      "name": "Italy (ITC2)",
+      "description": ""
+    },
+    "itc3": {
+      "name": "Italy (ITC3)",
+      "description": ""
+    },
+    "itc4": {
+      "name": "Italy (ITC4)",
+      "description": ""
+    },
+    "itf1": {
+      "name": "Italy (ITF1)",
+      "description": ""
+    },
+    "itf2": {
+      "name": "Italy (ITF2)",
+      "description": ""
+    },
+    "itf3": {
+      "name": "Italy (ITF3)",
+      "description": ""
+    },
+    "itf4": {
+      "name": "Italy (ITF4)",
+      "description": ""
+    },
+    "itf5": {
+      "name": "Italy (ITF5)",
+      "description": ""
+    },
+    "itf6": {
+      "name": "Italy (ITF6)",
+      "description": ""
+    },
+    "itg1": {
+      "name": "Italy (ITG1)",
+      "description": ""
+    },
+    "itg2": {
+      "name": "Italy (ITG2)",
+      "description": ""
+    },
+    "ith1": {
+      "name": "Italy (ITH1)",
+      "description": ""
+    },
+    "ith2": {
+      "name": "Italy (ITH2)",
+      "description": ""
+    },
+    "ith3": {
+      "name": "Italy (ITH3)",
+      "description": ""
+    },
+    "ith4": {
+      "name": "Italy (ITH4)",
+      "description": ""
+    },
+    "ith5": {
+      "name": "Italy (ITH5)",
+      "description": ""
+    },
+    "iti1": {
+      "name": "Italy (ITI1)",
+      "description": ""
+    },
+    "iti2": {
+      "name": "Italy (ITI2)",
+      "description": ""
+    },
+    "iti3": {
+      "name": "Italy (ITI3)",
+      "description": ""
+    },
+    "iti4": {
+      "name": "Italy (ITI4)",
+      "description": ""
+    },
+    "lt00": {
+      "name": "Lithuania",
+      "description": ""
+    },
+    "lu00": {
+      "name": "Luxembourg",
+      "description": ""
+    },
+    "lv00": {
+      "name": "Latvia",
+      "description": ""
+    },
+    "mt00": {
+      "name": "Malta",
+      "description": ""
+    },
+    "nl00": {
+      "name": "Netherlands",
+      "description": ""
+    },
+    "pl00": {
+      "name": "Poland",
+      "description": ""
+    },
+    "pt00": {
+      "name": "Portugal",
+      "description": ""
+    },
+    "ro00": {
+      "name": "Romania",
+      "description": ""
+    },
+    "se00": {
+      "name": "Sweden",
+      "description": ""
+    },
+    "si00": {
+      "name": "Slovenia",
+      "description": ""
+    },
+    "sk00": {
+      "name": "Slovakia",
+      "description": ""
+    },
+    "cz010": {
+      "name": "Czech Republic (CZ010)",
+      "description": ""
+    },
+    "cz020": {
+      "name": "Czech Republic (CZ020)",
+      "description": ""
+    },
+    "cz031": {
+      "name": "Czech Republic (CZ031)",
+      "description": ""
+    },
+    "cz032": {
+      "name": "Czech Republic (CZ032)",
+      "description": ""
+    },
+    "cz041": {
+      "name": "Czech Republic (CZ041)",
+      "description": ""
+    },
+    "cz042": {
+      "name": "Czech Republic (CZ042)",
+      "description": ""
+    },
+    "cz051": {
+      "name": "Czech Republic (CZ051)",
+      "description": ""
+    },
+    "cz052": {
+      "name": "Czech Republic (CZ052)",
+      "description": ""
+    },
+    "cz053": {
+      "name": "Czech Republic (CZ053)",
+      "description": ""
+    },
+    "cz063": {
+      "name": "Czech Republic (CZ063)",
+      "description": ""
+    },
+    "cz064": {
+      "name": "Czech Republic (CZ064)",
+      "description": ""
+    },
+    "cz071": {
+      "name": "Czech Republic (CZ071)",
+      "description": ""
+    },
+    "cz072": {
+      "name": "Czech Republic (CZ072)",
+      "description": ""
+    },
+    "cz080": {
+      "name": "Czech Republic (CZ080)",
+      "description": ""
+    }
+  },
+  "map_scenario": {
+    "low": {
+      "name": "Low",
+      "description": "Low bioeconomy demand pathway: demand for construction wood and textiles is cut 50% and bioenergy by 22% compared to BASE, prioritising carbon retention in the forest over carbon in the bioeconomy."
+    },
+    "high": {
+      "name": "High",
+      "description": "High bioeconomy demand pathway: substantial expansion in wood use for construction (+100%), textiles (+200%), and bioenergy (+28%) relative to BASE, boosting carbon storage outside forests but increasing harvest pressure."
+    },
+    "nocc": {
+      "name": "Current climate case",
+      "description": "Policy Reference Scenario under current climate conditions without explicit climate-change and natural-disturbance impacts."
+    },
+    "baseline": {
+      "name": "Baseline",
+      "description": "Business-as-usual trajectory: moderate growth in wood demand for construction, textiles, and bioenergy consistent with historical trends and GDP/population drivers, without new policy interventions after 2023."
+    },
+    "gfdl_co2": {
+      "name": "GFDL-ESM4 climate-impact case with CO2 fertilisation",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from GFDL-ESM4 under RCP/SSP2-4.5, including transient CO2 fertilisation effects."
+    },
+    "low_circu": {
+      "name": "Low Circularity",
+      "description": "Low-demand scenario with extended circularity (recycling rate up to 75%, sawnwood reuse, cascading priority), achieving the largest harvest reductions among all tested scenarios."
+    },
+    "ukesm_co2": {
+      "name": "UKESM1-0-LL climate-impact case with CO2 fertilisation",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from UKESM1-0-LL under RCP/SSP2-4.5, including transient CO2 fertilisation effects."
+    },
+    "gfdl_noco2": {
+      "name": "GFDL-ESM4 climate-impact case without CO2 fertilisation",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from GFDL-ESM4 under RCP/SSP2-4.5, excluding transient CO2 fertilisation effects."
+    },
+    "high_circu": {
+      "name": "High Circularity",
+      "description": "A high wood demand scenario considering enhanced circular bioeconomy: wood recycling rates can rise up to 75% over time, sawnwood reuse is introduced, and by-product cascading is prioritized, reducing virgin harvest pressure while sustaining wood demand growth."
+    },
+    "ukesm_noco2": {
+      "name": "UKESM1-0-LL climate-impact case without CO2 fertilisation",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from UKESM1-0-LL under RCP/SSP2-4.5, excluding transient CO2 fertilisation effects."
+    },
+    "low_fixtrade": {
+      "name": "Low Fixed Trade",
+      "description": "Low-demand scenario with trade fixed at BASE levels: reduced domestic demand does not translate into increased exports, isolating the domestic harvest reduction from trade-related carbon leakage effects."
+    },
+    "high_fixtrade": {
+      "name": "High Fixed Trade",
+      "description": "High-demand scenario with trade fixed at baseline levels: increased demand relative to the BASE must be met by incresing domestic harvest, removing trade-mediated carbon leakage but increasing pressure on EU forests."
+    },
+    "gfdl_co2_ssp370": {
+      "name": "GFDL-ESM4 climate-impact case with CO₂ fertilisation under SSP3-7.0",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from GFDL-ESM4 under RCP/SSP3-7.0 (higher emissions pathway), including transient CO2."
+    },
+    "ukesm_co2_ssp370": {
+      "name": "UKESM1-0-LL climate-impact case with CO₂ fertilisation under SSP3-7.0",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from UKESM1-0-LL under RCP/SSP3-7.0 (higher emissions pathway), including transient CO₂ fertilisation effects on forest growth."
+    },
+    "gfdl_noco2_ssp370": {
+      "name": "GFDL-ESM4 climate-impact case without CO₂ fertilisation under SSP3-7.0",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from GFDL-ESM4 under RCP/SSP3-7.0 (higher emissions pathway), excluding transient CO₂ fertilisation effects on forest growth."
+    },
+    "ukesm_noco2_ssp370": {
+      "name": "KESM1-0-LL climate-impact case without CO₂ fertilisation under SSP3-7.0",
+      "description": "Policy Reference Scenario with explicit climate-change and natural-disturbance impacts from UKESM1-0-LL under RCP/SSP3-7.0 (higher emissions pathway), excluding transient CO₂ fertilisation effects on forest growth."
+    }
+  },
+  "map_variable": {
+    "area": {
+      "name": "Area",
+      "description": "Total EU27 forested area in million hectares, tracking annual changes from afforestation (new forest establishment) and deforestation (conversion to other land uses)."
+    },
+    "stock": {
+      "name": "Stock",
+      "description": "Cumulative carbon stored in forest biomass (PgC), tracked separately for forest land, afforestation/deforestation, harvested wood products (HWP), and BECCS and for additional substitution (avoided carbon emissions relative to BASE)."
+    },
+    "losses": {
+      "name": "Losses",
+      "description": "Biomass losses due to Wood harvest "
+    },
+    "area_un": {
+      "name": "Area Unmanaged",
+      "description": "Total forest area (kha) under no active harvest management, corresponding to primary forests and unmanaged forest classes (PriFor, CuS, Cur0) in the GLOBIOM/G4M-X model. Changes relative to base year 2000 are allocated at grid level using GLOBIOM land-use and forest management dynamics."
+    },
+    "emissions": {
+      "name": "Emissions",
+      "description": "Net annual change of carbon stocks (MtCO₂/yr), tracked separately for  forest land, harvested wood products (HWP), and BECCS and for additional substitution (avoided carbon emissions relative to BASE)."
+    },
+    "employment": {
+      "name": "Employment",
+      "description": "Total number of people employed in the EU forest sector (millions), projected via the MAGNET emulator. Driven by wood demand levels and offset over time by rising labour productivity."
+    },
+    "production": {
+      "name": "Production",
+      "description": "Total monetary value of goods produced by the EU forest-based sector (million USD), derived from the MAGNET economic model lookup table. Covers output across forestry and biobased industries including wood products, residues, pellets, paper, and biochemicals."
+    },
+    "value_added": {
+      "name": "Value Added",
+      "description": "Value Added of the forest sector as economic output generated by the EU forest sector (billion USD 2017), estimated via the MAGNET emulator."
+    },
+    "species_richness": {
+      "name": "Species Richness",
+      "description": "A biodiversity indicator (% change relative to baseline) derived from the iBIS.iSDM model, measuring the response of EU forest-dwelling species assemblages to changes in harvest intensity and management class distribution."
+    }
+  },
+  "mapschema_item": {
+    "required": [
+      "name",
+      "description"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  },
+  "mapschema_model": {
+    "required": [
+      "description",
+      "name"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  },
+  "mapschema_region": {
+    "required": [
+      "description",
+      "name"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  },
+  "mapschema_scenario": {
+    "required": [
+      "description",
+      "name"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  },
+  "mapschema_variable": {
+    "required": [
+      "name",
+      "description"
+    ],
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  },
+  "template_validators": "not defined",
+  "root_schema_declarations": {
+    "time_dimension": "year",
+    "unit_dimension": "units",
+    "value_dimension": "value",
+    "region_dimension": "region",
+    "variable_dimension": "variable",
+    "final_dimensions_order": [
+      "model",
+      "scenario",
+      "region",
+      "variable",
+      "item",
+      "year",
+      "value",
+      "units"
+    ],
+    "region_boundary_file_link": ""
+  }
+}

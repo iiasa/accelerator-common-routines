@@ -215,7 +215,6 @@ class CsvRegionalTimeseriesVerificationService():
                         )
                     # Apply splitting
                     row[field] = row[field].split(splitter) if row.get(field) else []
-                    print(f"Preprocessed field '{field}' with x-split '{splitter}': {row[field]}")
                 else:
                     raise ValueError(
                         f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
@@ -264,12 +263,12 @@ class CsvRegionalTimeseriesVerificationService():
             map_documents = self.get_map_documents(key)
 
             if map_documents:
-                if type(row[key]) == list:
-                    for item in row[key]:
+                if type(validation_row[key]) == list:
+                    for item in validation_row[key]:
                         if item not in map_documents:
                             raise ValueError(f"'{item}' must be one of {map_documents.keys()}" )
-                elif row[key] not in map_documents:
-                    raise ValueError(f"'{row[key]}' must be one of {map_documents.keys()}" )
+                elif validation_row[key] not in map_documents:
+                    raise ValueError(f"'{validation_row[key]}' must be one of {map_documents.keys()}" )
 
             # TODO we will remote this whole block of metadata preparation thing.
             if self.rules['root']['properties'][key]['type'] == 'array':
