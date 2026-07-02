@@ -602,6 +602,10 @@ class CsvRegionalTimeseriesVerificationService():
             else:
                 s3_parquet_filename = '/'.join(s3_parquet_filename.split("/")[1:])
 
+
+            print("Sleeping")
+            print(f"File to check:  {self.filename}.parquet")
+            time.sleep(3600)
             import shutil
             shutil.copy2(
                 Path(f"{self.temp_sorted_filepath}.parquet"),
