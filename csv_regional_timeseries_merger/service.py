@@ -76,6 +76,9 @@ class CSVRegionalTimeseriesMergeService:
 
         self.files = files
         self.filepaths = filepaths
+
+        self.first_downloaded_filepath = self.files[0]
+        self.first_file_copy = self.first_downloaded_filepath + ".copy"
     
     def check_input_files(self):
         
@@ -184,7 +187,7 @@ class CSVRegionalTimeseriesMergeService:
             table = pa.Table.from_batches([batch])
             if parquet_writer is None:
                 parquet_writer = pq.ParquetWriter(
-                    self.files[0] + '.parquet',
+                    self.first_file_copy + '.parquet',
                     table.schema,
                     compression='snappy'
                 )
@@ -204,24 +207,21 @@ class CSVRegionalTimeseriesMergeService:
     def __call__(self):
         self.check_input_files()
 
-        first_downloaded_filepath = self.files[0]
 
         for file in self.files[1:]:
 
-            first_file_copy = first_downloaded_filepath + ".copy"
-
             try:
-                shutil.copyfile(first_downloaded_filepath, first_file_copy)
+                shutil.copyfile(self.first_downloaded_filepath, self.first_file_copy)
             except Exception as e:
                 print(f"Sleeping 15 minutes for debugging...")
                 time.sleep(900)
                 print(f"Error occurred while copying file: {e}")
 
-            possible_line_breaks = self.get_possible_file_line_break(first_downloaded_filepath)
+            possible_line_breaks = self.get_possible_file_line_break(self.first_downloaded_filepath)
 
             next_downloaded_filepath = file
 
-            with open(first_file_copy, "ab") as merged_file:
+            with open(self.first_file_copy, "ab") as merged_file:
                 with open(next_downloaded_filepath, 'rb') as being_merged_file:
                     
                     if not set([b'\n', b'\r\n', b'\r', b'\n\r']).intersection(set(possible_line_breaks)):
@@ -244,11 +244,11 @@ class CSVRegionalTimeseriesMergeService:
         validation_metadata, dataset_template_id = self.get_merged_validated_metadata()
 
 
-        self.create_associated_parquet(first_file_copy)
+        self.create_associated_parquet(self.first_file_copy)
 
-        # rename first_file_copy to <output_filename>.csv <first_file_copy>.parquet to <output_filename>.csv.parquet
-        os.rename(first_file_copy, f"{self.output_filename}.csv")
-        os.rename(f"{first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
+        # rename self.first_file_copy to <output_filename>.csv <self.first_file_copy>.parquet to <output_filename>.csv.parquet
+        os.rename(self.first_file_copy, f"{self.output_filename}.csv")
+        os.rename(f"{self.first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
 
         # move above rename files in ./outputs directory
         os.makedirs('./outputs', exist_ok=True)
