@@ -205,73 +205,81 @@ class CSVRegionalTimeseriesMergeService:
 
 
     def __call__(self):
-        self.check_input_files()
+        try:
+            self.check_input_files()
 
 
-        for file in self.files[1:]:
+            for file in self.files[1:]:
 
-            try:
-                shutil.copyfile(self.first_downloaded_filepath, self.first_file_copy)
-            except Exception as e:
-                print(f"Sleeping 15 minutes for debugging...")
-                time.sleep(900)
-                print(f"Error occurred while copying file: {e}")
+                try:
+                    shutil.copyfile(self.first_downloaded_filepath, self.first_file_copy)
+                except Exception as e:
+                    print(f"Sleeping 15 minutes for debugging...")
+                    time.sleep(900)
+                    print(f"Error occurred while copying file: {e}")
 
-            possible_line_breaks = self.get_possible_file_line_break(self.first_downloaded_filepath)
+                possible_line_breaks = self.get_possible_file_line_break(self.first_downloaded_filepath)
 
-            next_downloaded_filepath = file
+                next_downloaded_filepath = file
 
-            with open(self.first_file_copy, "ab") as merged_file:
-                with open(next_downloaded_filepath, 'rb') as being_merged_file:
+                with open(self.first_file_copy, "ab") as merged_file:
+                    with open(next_downloaded_filepath, 'rb') as being_merged_file:
+                        
+                        if not set([b'\n', b'\r\n', b'\r', b'\n\r']).intersection(set(possible_line_breaks)):
+                            dat = '\n'
+                            merged_file.write(dat)
+
+                        # Skip the first line of the being_merged_file
+                        being_merged_file.readline()
+
+                        # Stream copy the remaining content using shutil with a large buffer
+                        shutil.copyfileobj(being_merged_file, merged_file, length=16*1024*1024)
+
                     
-                    if not set([b'\n', b'\r\n', b'\r', b'\n\r']).intersection(set(possible_line_breaks)):
-                        dat = '\n'
-                        merged_file.write(dat)
+            merge_only = True if os.environ.get('MERGE_ONLY') in ['True', 'true', '1', 'TRUE'] else False
+            
+            if merge_only:
+                print('Merge complete. Validation of merge not registered in server as MERGE_ONLY is set.')
+                return
 
-                    # Skip the first line of the being_merged_file
-                    being_merged_file.readline()
-
-                    # Stream copy the remaining content using shutil with a large buffer
-                    shutil.copyfileobj(being_merged_file, merged_file, length=16*1024*1024)
-
-                
-        merge_only = True if os.environ.get('MERGE_ONLY') in ['True', 'true', '1', 'TRUE'] else False
-        
-        if merge_only:
-            print('Merge complete. Validation of merge not registered in server as MERGE_ONLY is set.')
-            return
-
-        validation_metadata, dataset_template_id = self.get_merged_validated_metadata()
+            validation_metadata, dataset_template_id = self.get_merged_validated_metadata()
 
 
-        self.create_associated_parquet(self.first_file_copy)
+            self.create_associated_parquet(self.first_file_copy)
 
-        # rename self.first_file_copy to <output_filename>.csv <self.first_file_copy>.parquet to <output_filename>.csv.parquet
-        os.rename(self.first_file_copy, f"{self.output_filename}.csv")
-        os.rename(f"{self.first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
+            # rename self.first_file_copy to <output_filename>.csv <self.first_file_copy>.parquet to <output_filename>.csv.parquet
+            os.rename(self.first_file_copy, f"{self.output_filename}.csv")
+            os.rename(f"{self.first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
 
-        # move above rename files in ./outputs directory
-        os.makedirs('./outputs', exist_ok=True)
-        shutil.move(f"{self.output_filename}.csv", f"./outputs/{self.output_filename}.csv")
-        shutil.move(f"{self.output_filename}.csv.parquet", f"./outputs/{self.output_filename}.csv.parquet")
+            # move above rename files in ./outputs directory
+            os.makedirs('./outputs', exist_ok=True)
+            shutil.move(f"{self.output_filename}.csv", f"./outputs/{self.output_filename}.csv")
+            shutil.move(f"{self.output_filename}.csv.parquet", f"./outputs/{self.output_filename}.csv.parquet")
 
-        # Monkey patch serializer
-        def monkey_patched_json_encoder_default(encoder, obj):
-            if isinstance(obj, set):
-                return list(obj)
-            return json.JSONEncoder.default(encoder, obj)
+            # Monkey patch serializer
+            def monkey_patched_json_encoder_default(encoder, obj):
+                if isinstance(obj, set):
+                    return list(obj)
+                return json.JSONEncoder.default(encoder, obj)
 
-        json.JSONEncoder.default = monkey_patched_json_encoder_default
-        # Monkey patch serializer
+            json.JSONEncoder.default = monkey_patched_json_encoder_default
+            # Monkey patch serializer
 
 
-        # register_validation_via_ipc(
-        #     f"{os.environ.get('PROJECT_SLUG', '')}/job-output/{}/{self.output_filename}.csv",
-        #     int(self.dataset_template_id),
-        #     self.validation_metadata,
-        #     [f"{self.original_filepath}.parquet"]
-        # )
-        print('Merge complete')
+            # register_validation_via_ipc(
+            #     f"{os.environ.get('PROJECT_SLUG', '')}/job-output/{}/{self.output_filename}.csv",
+            #     int(self.dataset_template_id),
+            #     self.validation_metadata,
+            #     [f"{self.original_filepath}.parquet"]
+            # )
+            print('Merge complete')
+
+        finally:
+            # Clean up temporary files
+            if os.path.exists(self.first_file_copy):
+                os.remove(self.first_file_copy)
+            if os.path.exists(f"{self.first_file_copy}.parquet"):
+                os.remove(f"{self.first_file_copy}.parquet")
 
 
           
