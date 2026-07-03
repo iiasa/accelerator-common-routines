@@ -1,4 +1,5 @@
 import io
+import time
 import os
 import json
 import uuid
@@ -208,6 +209,8 @@ class CSVRegionalTimeseriesMergeService:
         for file in self.files[1:]:
 
             first_file_copy = first_downloaded_filepath + ".copy"
+
+            time.sleep(3600)
             shutil.copyfile(first_downloaded_filepath, first_file_copy)
 
             possible_line_breaks = self.get_possible_file_line_break(first_downloaded_filepath)
