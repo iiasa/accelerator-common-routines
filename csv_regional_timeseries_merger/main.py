@@ -15,7 +15,7 @@ files = []
 
 for filepath in filepaths:
     rel_filepath = filepath.lstrip(os.environ.get('PROJECT_SLUG', '') + '/')
-    files.append(rel_filepath)
+    files.append(f"/mnt/wdrv/{rel_filepath}")
 
 def get_token():
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
