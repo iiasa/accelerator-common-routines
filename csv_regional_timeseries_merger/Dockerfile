@@ -6,5 +6,7 @@ RUN pip install -r /code/requirements.txt
 
 COPY ./csv_regional_timeseries_merger/ /code
 
+RUN chown -R 65534:65534 /code && chmod -R g+rwX /code
+
 WORKDIR /code
 
