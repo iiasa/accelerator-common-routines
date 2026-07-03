@@ -268,8 +268,8 @@ class CSVRegionalTimeseriesMergeService:
 
             register_validation_via_ipc(
                 f"{os.environ['PROJECT_SLUG']}/job-outputs/{os.environ['JOB_ID']}/merged/{self.output_filename}.csv",
-                int(self.dataset_template_id),
-                self.validation_metadata,
+                dataset_template_id,
+                validation_metadata,
                 [f"{os.environ['PROJECT_SLUG']}/job-outputs/{os.environ['JOB_ID']}/merged/{self.output_filename}.csv.parquet"]
             )
             print('Merge complete')
