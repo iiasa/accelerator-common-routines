@@ -111,7 +111,7 @@ class CSVRegionalTimeseriesMergeService:
     def get_merged_validated_metadata(self):
         first_validation_details = self.project_service().get_filename_validation_details(self.filepaths[0])
 
-        dataset_template_details = self.project_service.get_dataset_template_details(first_validation_details['dataset_template_id'])
+        dataset_template_details = self.project_service().get_dataset_template_details(first_validation_details['dataset_template_id'])
 
         rules =  dataset_template_details.get('rules')
 
@@ -124,7 +124,7 @@ class CSVRegionalTimeseriesMergeService:
         first_validation_metadata = first_validation_details['validation_metadata']
 
         for filepath in self.filepaths[1:]:
-            next_validation_metadata = self.project_service.get_filename_validation_details(filepath)['validation_metadata']
+            next_validation_metadata = self.project_service().get_filename_validation_details(filepath)['validation_metadata']
 
             for key in first_validation_metadata:
 
