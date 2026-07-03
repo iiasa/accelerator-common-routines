@@ -605,8 +605,16 @@ class CsvRegionalTimeseriesVerificationService():
 
             
             dest = Path(f"{self.filename}.parquet")
+           
             if dest.exists():
-                dest.unlink()
+                
+                print(f"\nERROR: Could not remove existing validation supporting file '{dest}'.")
+                print("This file already exists and is locked. Either the dataset has already been validated,")
+                print("or another validation process is still running. Please check the Accelerator portal")
+                print("and remove any existing validation for this dataset before retrying.")
+                
+                raise ValueError
+            
             Path(f"{self.temp_sorted_filepath}.parquet").rename(dest)
 
             # Monkey patch serializer
