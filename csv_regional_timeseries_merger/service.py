@@ -247,14 +247,14 @@ class CSVRegionalTimeseriesMergeService:
 
             self.create_associated_parquet(self.first_file_copy)
 
-            # rename self.first_file_copy to <output_filename>.csv <self.first_file_copy>.parquet to <output_filename>.csv.parquet
-            os.rename(self.first_file_copy, f"{self.output_filename}.csv")
-            os.rename(f"{self.first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
+            # # rename self.first_file_copy to <output_filename>.csv <self.first_file_copy>.parquet to <output_filename>.csv.parquet
+            # os.rename(self.first_file_copy, f"{self.output_filename}.csv")
+            # os.rename(f"{self.first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
 
             # move above rename files in ./outputs directory
             os.makedirs('./outputs', exist_ok=True)
-            shutil.move(f"{self.output_filename}.csv", f"./outputs/{self.output_filename}.csv")
-            shutil.move(f"{self.output_filename}.csv.parquet", f"./outputs/{self.output_filename}.csv.parquet")
+            shutil.move(self.first_file_copy, f"./outputs/{self.output_filename}.csv")
+            shutil.move(f"{self.first_file_copy}.parquet", f"./outputs/{self.output_filename}.csv.parquet")
 
             # Monkey patch serializer
             def monkey_patched_json_encoder_default(encoder, obj):
