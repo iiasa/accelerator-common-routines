@@ -20,7 +20,7 @@ for filepath in filepaths:
 def get_token():
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(30)
-    s.connect("__WAGT_SOCK__")
+    s.connect(f"/mnt/tmp/.wkube_agent/{os.environ['POD_ID']}/wagt.sock")
     payload = json.dumps({"action": "get-access-token"}).encode("utf-8")
     s.sendall(payload)
     s.shutdown(socket.SHUT_WR)
