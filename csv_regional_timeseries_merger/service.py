@@ -9,6 +9,45 @@ import pyarrow.parquet as pq
 import pyarrow.csv as pa_csv
 from accli import AjobCliService
 
+def register_validation_via_ipc(
+    validated_filename: str,
+    dataset_template_id: int,
+    validated_metadata: dict,
+    validation_supporting_filenames: list
+) -> bool:
+    """
+    Registers validation by appending the task payload to a JSON registry file
+    consumed by the parent wagt agent.
+    """
+    pod_id = os.environ["POD_ID"]
+    registry_dir = f"/mnt/tmp/.wkube_agent/{pod_id}"
+    registry_path = f"{registry_dir}/post_task_registry.json"
+
+    os.makedirs(registry_dir, exist_ok=True)
+
+    entry = {
+        "action": "register-validation-with-filename",
+        "payload": {
+            "validated_filename": validated_filename,
+            "dataset_template_id": dataset_template_id,
+            "validated_metadata": validated_metadata,
+            "validation_supporting_filenames": validation_supporting_filenames
+        }
+    }
+
+    if os.path.exists(registry_path):
+        with open(registry_path) as f:
+            registry = json.load(f)
+    else:
+        registry = []
+
+    registry.append(entry)
+
+    with open(registry_path, "w") as f:
+        json.dump(registry, f, indent=2)
+
+    return True
+
 
 class CSVRegionalTimeseriesMergeService:
     def __init__(
@@ -16,7 +55,7 @@ class CSVRegionalTimeseriesMergeService:
         *,
         filename: str,
         files: list[str],
-        job_token,
+        get_job_token,
         filepaths: list[str]
     ):
         
@@ -24,8 +63,8 @@ class CSVRegionalTimeseriesMergeService:
             raise ValueError("Filename for merged file is required.")
 
 
-        self.project_service = AjobCliService(
-            job_token,
+        self.project_service = lambda : AjobCliService(
+            get_job_token(),
             server_url=os.environ.get('ACC_JOB_GATEWAY_SERVER'),
             verify_cert=False
         )
@@ -42,12 +81,12 @@ class CSVRegionalTimeseriesMergeService:
         if len(self.files) < 2:
             raise ValueError("Argument files should be at least two items.")
         
-        first_file_type_id = self.project_service.get_filename_dataset_type(
+        first_file_type_id = self.project_service().get_filename_dataset_type(
             self.filepaths[0]
         )
         
         for filepath in self.filepaths[1:]:
-            other_file_type_id = self.project_service.get_filename_dataset_type(
+            other_file_type_id = self.project_service().get_filename_dataset_type(
                 filepath
             )
 
@@ -69,7 +108,7 @@ class CSVRegionalTimeseriesMergeService:
 
         
     def get_merged_validated_metadata(self):
-        first_validation_details = self.project_service.get_filename_validation_details(self.filepaths[0])
+        first_validation_details = self.project_service().get_filename_validation_details(self.filepaths[0])
 
         dataset_template_details = self.project_service.get_dataset_template_details(first_validation_details['dataset_template_id'])
 
@@ -168,11 +207,14 @@ class CSVRegionalTimeseriesMergeService:
 
         for file in self.files[1:]:
 
+            first_file_copy = first_downloaded_filepath + ".copy"
+            shutil.copyfile(first_downloaded_filepath, first_file_copy)
+
             possible_line_breaks = self.get_possible_file_line_break(first_downloaded_filepath)
 
             next_downloaded_filepath = file
 
-            with open(first_downloaded_filepath, "ab") as merged_file:
+            with open(first_file_copy, "ab") as merged_file:
                 with open(next_downloaded_filepath, 'rb') as being_merged_file:
                     
                     if not set([b'\n', b'\r\n', b'\r', b'\n\r']).intersection(set(possible_line_breaks)):
@@ -195,19 +237,16 @@ class CSVRegionalTimeseriesMergeService:
         validation_metadata, dataset_template_id = self.get_merged_validated_metadata()
 
 
-        self.create_associated_parquet(first_downloaded_filepath)
+        self.create_associated_parquet(first_file_copy)
 
-        with open(first_downloaded_filepath, "rb") as file_stream:
-            uploaded_bucket_object_id = self.project_service.add_filestream_as_job_output(
-                f"{self.output_filename}.csv",
-                file_stream,
-            )
+        # rename first_file_copy to <output_filename>.csv <first_file_copy>.parquet to <output_filename>.csv.parquet
+        os.rename(first_file_copy, f"{self.output_filename}.csv")
+        os.rename(f"{first_file_copy}.parquet", f"{self.output_filename}.csv.parquet")
 
-        with open(f"{first_downloaded_filepath}.parquet", "rb") as file_stream:
-            uploaded_parquet_bucket_object_id = self.project_service.add_filestream_as_validation_supporter(
-                f"job-outputs/{os.environ['JOB_ID']}/{self.output_filename}.csv.parquet",
-                file_stream,
-            )
+        # move above rename files in ./outputs directory
+        os.makedirs('./outputs', exist_ok=True)
+        shutil.move(f"{self.output_filename}.csv", f"./outputs/{self.output_filename}.csv")
+        shutil.move(f"{self.output_filename}.csv.parquet", f"./outputs/{self.output_filename}.csv.parquet")
 
         # Monkey patch serializer
         def monkey_patched_json_encoder_default(encoder, obj):
@@ -219,12 +258,12 @@ class CSVRegionalTimeseriesMergeService:
         # Monkey patch serializer
 
 
-        self.project_service.register_validation(
-            uploaded_bucket_object_id,
-            dataset_template_id,
-            validation_metadata,
-            [uploaded_parquet_bucket_object_id]
-        )
+        # register_validation_via_ipc(
+        #     f"{os.environ.get('PROJECT_SLUG', '')}/job-output/{}/{self.output_filename}.csv",
+        #     int(self.dataset_template_id),
+        #     self.validation_metadata,
+        #     [f"{self.original_filepath}.parquet"]
+        # )
         print('Merge complete')
 
 
