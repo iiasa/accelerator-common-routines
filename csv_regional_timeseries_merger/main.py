@@ -14,7 +14,10 @@ merged_filename = os.environ['merged_filename']
 files = []
 
 for filepath in filepaths:
-    rel_filepath = filepath.lstrip(os.environ.get('PROJECT_SLUG', '') + '/')
+    prefix = os.environ['PROJECT_SLUG'] + '/'
+    if not filepath.startswith(prefix):
+        raise ValueError(f"Filepath '{filepath}' does not start with the expected prefix '{prefix}'.")  
+    rel_filepath = filepath[len(prefix):]
     files.append(f"/mnt/wdrv/{rel_filepath}")
 
 def get_token():
