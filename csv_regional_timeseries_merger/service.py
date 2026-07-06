@@ -208,15 +208,14 @@ class CSVRegionalTimeseriesMergeService:
         try:
             self.check_input_files()
 
+            try:
+                shutil.copyfile(self.first_downloaded_filepath, self.first_file_copy)
+            except Exception as e:
+                print(f"Sleeping 15 minutes for debugging...")
+                time.sleep(900)
+                print(f"Error occurred while copying file: {e}")
 
             for file in self.files[1:]:
-
-                try:
-                    shutil.copyfile(self.first_downloaded_filepath, self.first_file_copy)
-                except Exception as e:
-                    print(f"Sleeping 15 minutes for debugging...")
-                    time.sleep(900)
-                    print(f"Error occurred while copying file: {e}")
 
                 possible_line_breaks = self.get_possible_file_line_break(self.first_downloaded_filepath)
 
