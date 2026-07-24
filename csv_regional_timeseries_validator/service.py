@@ -615,12 +615,13 @@ class CsvRegionalTimeseriesVerificationService():
                 
                 # raise ValueError
 
-                Path(dest).replace(
-                                Path(f"{self.temp_sorted_filepath}.parquet")
-                )
+                # Path(dest).replace(
+                #                 Path(f"{self.temp_sorted_filepath}.parquet")
+                # )
+
+                Path(f"{self.temp_sorted_filepath}.parquet").rename(dest)
             else:
                             
-
                 Path(f"{self.temp_sorted_filepath}.parquet").rename(dest)
 
             # Monkey patch serializer
