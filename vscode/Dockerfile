@@ -27,11 +27,11 @@ RUN apt-get update && apt-get install -y \
 # Install and register R kernel system-wide
 RUN R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IRkernel::installspec(user=FALSE)"
 
-# --- System Packages: Grant sudo access to the coder user ---
-# This allows the user to install system packages (e.g., via apt-get) within the container
-RUN echo "coder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
+# --- Workspace Permissions ---
+# Ensure the new user owns the workspace
+RUN chown -R 65534:65534 /home/coder
 
-USER coder
+USER 65534
 
 
 # --- R: Configure user-level library for packages ---
@@ -51,7 +51,7 @@ RUN code-server --install-extension RooVeterinaryInc.roo-cline \
     && code-server --install-extension REditorSupport.r
 
 # Copy the entrypoint script
-COPY --chown=coder:coder ./vscode/entrypoint.sh /usr/bin/entrypoint.sh
+COPY --chown=65534:65534 ./vscode/entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
 
 # Expose the default port for code-server
