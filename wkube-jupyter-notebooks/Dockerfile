@@ -17,8 +17,8 @@ RUN mkdir -p /home/jovyan/.jupyter/nbi && \
     }' > /home/jovyan/.jupyter/nbi/config.json
 
 # --- FIX 2: Correct Permissions ---
-# Ensure the jovyan user owns the new config file
-RUN chown -R $NB_UID:$NB_GID /home/jovyan/.jupyter
+# Ensure everything in the home directory and conda env is owned by the new UID/GID
+RUN chown -R 65534:65534 /home/jovyan /opt/conda
 
 ENV JUPYTER_ENABLE_LAB=yes
 ENV OPENAI_BASE_URL="https://accelerator.iiasa.ac.at/api/v1/openai/v1"
@@ -26,5 +26,5 @@ ENV OPENAI_BASE_URL="https://accelerator.iiasa.ac.at/api/v1/openai/v1"
 COPY ./wkube-jupyter-notebooks/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-USER $NB_UID
+USER 65534
 EXPOSE 8888
