@@ -1,4 +1,4 @@
-FROM python:3.10.4
+FROM python:3.10-bookworm
 
 COPY ./csv_regional_timeseries_merger/requirements.txt /code/requirements.txt
 
