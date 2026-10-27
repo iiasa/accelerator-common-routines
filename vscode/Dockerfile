@@ -32,6 +32,8 @@ RUN R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IR
 RUN chown -R 65534:65534 /home/coder
 
 USER 65534
+# UID 65534 is 'nobody', whose home is /nonexistent; point HOME at the coder home
+ENV HOME=/home/coder
 
 
 # --- R: Configure user-level library for packages ---
@@ -45,7 +47,8 @@ RUN mkdir -p /home/coder/.local/share/code-server/User && \
     echo '{"chat.disableAIFeatures": true, "chat.editor.enabled": false}' > /home/coder/.local/share/code-server/User/settings.json
 
 # Install extensions
-RUN code-server --install-extension RooVeterinaryInc.roo-cline \
+RUN code-server --install-extension Anthropic.claude-code \
+    && code-server --install-extension Google.google-antigravity \
     && code-server --install-extension ms-python.python \
     && code-server --install-extension ms-toolsai.jupyter \
     && code-server --install-extension REditorSupport.r
@@ -57,5 +60,5 @@ RUN chmod +x /usr/bin/entrypoint.sh
 # Expose the default port for code-server
 EXPOSE 8080
 
-# Use the entrypoint script to configure Cline at runtime
+# Use the entrypoint script to launch code-server
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]

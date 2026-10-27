@@ -28,6 +28,10 @@ CustomValidator = extend(Draft202012Validator, type_checker=type_checker)
 
 
 
+class TemplateSchemaError(Exception):
+    """Column/schema level problem. Always fatal, even when OMIT_INVALID_ROWS is set."""
+
+
 class CaseInsensitiveDict(dict):
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -148,6 +152,8 @@ class CsvRegionalTimeseriesVerificationService():
         )
 
         self.errors = dict()
+        self.invalid_row_count = 0
+        self.valid_row_count = 0
     
     
     def get_map_documents(self, field_name):
@@ -199,13 +205,13 @@ class CsvRegionalTimeseriesVerificationService():
                 if splitter:
                     item_type = rules.get("items", {}).get("type")
                     if item_type != "string":
-                        raise ValueError(
+                        raise TemplateSchemaError(
                             f"Field '{field}' uses x-split but its items are not strings (found: {item_type})"
                         )
                     # Apply splitting
                     row[field] = row[field].split(splitter) if row.get(field) else []
                 else:
-                    raise ValueError(
+                    raise TemplateSchemaError(
                         f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
         )
                 
@@ -238,7 +244,7 @@ class CsvRegionalTimeseriesVerificationService():
 
         except SchemaError as schema_error:
            
-            raise ValueError(
+            raise TemplateSchemaError(
                 f"Schema itself is not valid with template id. Template id: {self.dataset_template_id}. Original exception: {str(schema_error)}"
             )
         except ValidationError as validation_error:
@@ -248,7 +254,6 @@ class CsvRegionalTimeseriesVerificationService():
         
 
         for key in self.rules['root']['properties']:
-            
             map_documents = self.get_map_documents(key)
 
             if map_documents:
@@ -258,50 +263,6 @@ class CsvRegionalTimeseriesVerificationService():
                             raise ValueError(f"'{item}' must be one of {map_documents.keys()}" )
                 elif validation_row[key] not in map_documents:
                     raise ValueError(f"'{validation_row[key]}' must be one of {map_documents.keys()}" )
-
-            # TODO we will remote this whole block of metadata preparation thing.
-            if self.rules['root']['properties'][key]['type'] == 'array':
-                continue
-
-            if key in [self.variable_dimension, self.unit_dimension]:
-                continue
-
-            if key == self.time_dimension:
-                if float(row[key]) < self.validation_metadata[
-                    f"{self.time_dimension}_meta"
-                ]["min_value"]:
-                    self.validation_metadata[
-                        f"{self.time_dimension}_meta"
-                    ]["min_value"] = float(row[key])
-
-                if float(row[key]) > self.validation_metadata[
-                    f"{self.time_dimension}_meta"
-                ]["max_value"]:
-                    self.validation_metadata[
-                        f"{self.time_dimension}_meta"
-                    ]["max_value"] = float(row[key])
-
-            if key == self.value_dimension:
-                continue
-
-
-                
-        
-            if self.validation_metadata.get(key):
-                if len(self.validation_metadata[key]) <= 1000: #limit harvest
-                    self.validation_metadata[key].add(row[key])
-
-            else:
-                self.validation_metadata[key] = set([row[key]])
-
-        if self.validation_metadata.get('variable-unit'):
-            if len(self.validation_metadata['variable-unit']) <= 1000: #limit harvest
-                    self.validation_metadata['variable-unit'].add((row[self.variable_dimension], row[self.unit_dimension]))
-        else:
-            self.validation_metadata['variable-unit'] = set([
-                (row[self.variable_dimension], row[self.unit_dimension])
-            ])
-
 
         extra_template_validators = self.rules.get('template_validators')
 
@@ -352,9 +313,70 @@ class CsvRegionalTimeseriesVerificationService():
                         if not re.match(pattern, lhs.strip()):
                             raise ValueError(f"Value {lhs}  did not match pattern {pattern}")
 
+        # Harvest metadata only after the row has passed every check
+        for key in self.rules['root']['properties']:
+            
+            # TODO we will remote this whole block of metadata preparation thing.
+            if self.rules['root']['properties'][key]['type'] == 'array':
+                continue
+
+            if key in [self.variable_dimension, self.unit_dimension]:
+                continue
+
+            if key == self.time_dimension:
+                if float(row[key]) < self.validation_metadata[
+                    f"{self.time_dimension}_meta"
+                ]["min_value"]:
+                    self.validation_metadata[
+                        f"{self.time_dimension}_meta"
+                    ]["min_value"] = float(row[key])
+
+                if float(row[key]) > self.validation_metadata[
+                    f"{self.time_dimension}_meta"
+                ]["max_value"]:
+                    self.validation_metadata[
+                        f"{self.time_dimension}_meta"
+                    ]["max_value"] = float(row[key])
+
+            if key == self.value_dimension:
+                continue
+
+
+                
+        
+            if self.validation_metadata.get(key):
+                if len(self.validation_metadata[key]) <= 1000: #limit harvest
+                    self.validation_metadata[key].add(row[key])
+
+            else:
+                self.validation_metadata[key] = set([row[key]])
+
+        if self.validation_metadata.get('variable-unit'):
+            if len(self.validation_metadata['variable-unit']) <= 1000: #limit harvest
+                    self.validation_metadata['variable-unit'].add((row[self.variable_dimension], row[self.unit_dimension]))
+        else:
+            self.validation_metadata['variable-unit'] = set([
+                (row[self.variable_dimension], row[self.unit_dimension])
+            ])
+
 
         return validation_row, row 
           
+    def validate_csv_columns(self, fieldnames):
+        root_schema = self.rules['root']
+        required_columns = root_schema.get('required') or list(root_schema.get('properties', {}))
+
+        csv_columns = [column.strip().lower() for column in (fieldnames or [])]
+        missing_columns = [
+            column for column in required_columns if column.lower() not in csv_columns
+        ]
+
+        if missing_columns:
+            raise TemplateSchemaError(
+                f"CSV columns do not match template. Template id: {self.dataset_template_id}. "
+                f"Missing columns: {missing_columns}. CSV columns: {csv_columns}"
+            )
+
     def get_validated_rows(self):
         with open(self.filename, encoding="utf-8-sig") as csvfile:
             reader = csv.DictReader(
@@ -363,6 +385,8 @@ class CsvRegionalTimeseriesVerificationService():
                 restkey='restkeys', 
                 restval='restvals'
             )
+
+            self.validate_csv_columns(reader.fieldnames)
 
             for row in reader:
                 row.pop('restkeys', None)
@@ -374,8 +398,12 @@ class CsvRegionalTimeseriesVerificationService():
 
                 try:
                     validation_row, original_row = self.validate_row_data(row)
+                    self.valid_row_count += 1
                     yield validation_row, original_row
+                except TemplateSchemaError:
+                    raise
                 except Exception as err:
+                    self.invalid_row_count += 1
                     if len(self.errors) <= 50:
                         self.errors[str(err)] = str(row)
 
@@ -517,7 +545,14 @@ class CsvRegionalTimeseriesVerificationService():
                     print(f"Details: {error_msg}")
                     print(f"Row Data: {row_data}")
                 print("\n" + "!" * 80)
-                raise ValueError("Invalid data: Data does not comply with template rules.")
+
+                omit_invalid_rows = os.environ.get('OMIT_INVALID_ROWS') in ['True', 'true', '1', 'TRUE']
+                if not omit_invalid_rows:
+                    raise ValueError("Invalid data: Data does not comply with template rules.")
+
+                print(f"OMIT_INVALID_ROWS is set. Omitted {self.invalid_row_count} invalid row(s); continuing with {self.valid_row_count} valid row(s).")
+                if not self.valid_row_count:
+                    raise ValueError("Invalid data: No valid rows left after omitting invalid rows.")
 
             verify_only = True if os.environ.get('VERIFY_ONLY') in ['True', 'true', '1', 'TRUE'] else False
             if verify_only:
