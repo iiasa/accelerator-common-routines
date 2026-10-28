@@ -27,14 +27,9 @@ RUN apt-get update && apt-get install -y \
 # Install and register R kernel system-wide
 RUN R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IRkernel::installspec(user=FALSE)"
 
-# --- Workspace Permissions ---
-# Ensure the new user owns the workspace
-RUN chown -R 65534:65534 /home/coder
-
-USER 65534
-# UID 65534 is 'nobody', whose home is /nonexistent; point HOME at the coder home
+# All build steps run as root with HOME pointed at the coder home, so that
+# rootless builders never have to exec a process as UID 65534 ('nobody').
 ENV HOME=/home/coder
-
 
 # --- R: Configure user-level library for packages ---
 # Ensures install.packages() doesn't fail on permission errors or prompt interactively
@@ -56,6 +51,13 @@ RUN code-server --install-extension Anthropic.claude-code \
 # Copy the entrypoint script
 COPY --chown=65534:65534 ./vscode/entrypoint.sh /usr/bin/entrypoint.sh
 RUN chmod +x /usr/bin/entrypoint.sh
+
+# --- Workspace Permissions ---
+# Ensure the runtime user owns everything created above
+RUN chown -R 65534:65534 /home/coder
+
+# Switch to the runtime user last; no RUN steps may follow this line
+USER 65534
 
 # Expose the default port for code-server
 EXPOSE 8080
