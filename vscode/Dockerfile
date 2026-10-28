@@ -27,6 +27,12 @@ RUN apt-get update && apt-get install -y \
 # Install and register R kernel system-wide
 RUN R -e "install.packages('IRkernel', repos='https://cloud.r-project.org/'); IRkernel::installspec(user=FALSE)"
 
+# Install R languageserver system-wide so the R extension doesn't prompt for it
+# (libuv1-dev is needed to compile its 'fs' dependency)
+RUN apt-get update && apt-get install -y libuv1-dev && rm -rf /var/lib/apt/lists/* \
+    && R -e "install.packages('languageserver', repos='https://cloud.r-project.org/', Ncpus=parallel::detectCores()); \
+    if (!requireNamespace('languageserver', quietly=TRUE)) quit(status=1)"
+
 # All build steps run as root with HOME pointed at the coder home, so that
 # rootless builders never have to exec a process as UID 65534 ('nobody').
 ENV HOME=/home/coder
