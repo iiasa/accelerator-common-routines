@@ -71,10 +71,14 @@ class CaseInsensitiveDict(dict):
 # print(case_insensitive_dict['c'])  # Output: 3
 
 
-def lower_rows(iterator):
-    # return itertools.chain([next(iterator).lower()], iterator)
-    for item in iterator:
-        yield item.lower()
+def lower_header(iterator):
+    """Lowercase only the header line so column matching is case-insensitive.
+    Data values keep their original case and must match the template exactly."""
+    first = next(iterator, None)
+    if first is not None:
+        yield first.lower()
+    yield from iterator
+
 
 
 def register_validation_via_ipc(
@@ -209,7 +213,7 @@ class CsvRegionalTimeseriesVerificationService():
                             f"Field '{field}' uses x-split but its items are not strings (found: {item_type})"
                         )
                     # Apply splitting
-                    row[field] = row[field].split(splitter) if row.get(field) else []
+                    row[field] = [part.strip() for part in row[field].split(splitter)] if row.get(field) else []
                 else:
                     raise TemplateSchemaError(
                         f"Field '{field}' is an array but does not have 'x-split' rule defined in the schema."
@@ -234,7 +238,8 @@ class CsvRegionalTimeseriesVerificationService():
         return value
     
     def validate_row_data(self, row):
-        row = CaseInsensitiveDict(row)
+        # Strip stray leading/trailing whitespace (e.g. 'growing_stock ') from all string values
+        row = CaseInsensitiveDict({k: v.strip() if isinstance(v, str) else v for k, v in row.items()})
         validation_row = self.preprocess_row(row.copy(), self.rules['root'])
         try:
             CustomValidator(
@@ -380,8 +385,8 @@ class CsvRegionalTimeseriesVerificationService():
     def get_validated_rows(self):
         with open(self.filename, encoding="utf-8-sig") as csvfile:
             reader = csv.DictReader(
-                lower_rows(csvfile), 
-                fieldnames=self.csv_fieldnames, 
+                csvfile if self.csv_fieldnames else lower_header(csvfile),
+                fieldnames=[name.lower() for name in self.csv_fieldnames] if self.csv_fieldnames else None,
                 restkey='restkeys', 
                 restval='restvals'
             )
