@@ -20,4 +20,6 @@ RUN pip install -r /code/requirements.txt
 
 COPY ./tif_to_cog_converter/ /code
 
+RUN chown -R 65534:65534 /code && chmod -R g+rwX /code
+
 WORKDIR /code
