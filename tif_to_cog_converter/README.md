@@ -10,14 +10,16 @@ By default, float data is stored as Int16 with a scale and offset per band. This
 2. Copies each file once to local scratch (`WORK_DIR`, default `/mnt/tmp`), so the network drive is read only once, as one sequential stream.
 3. Sets the CRS or nodata if overridden, then calculates per-band statistics in one pass.
 4. For float data, unless `LOSSLESS=true`: converts the values to Int16 with a scale and offset per band (see [Float data](#float-data-int16-by-default-or-lossless)).
-5. Writes the COG and moves it to `outputs/`, where the agent collects it as job output. The scratch folder is always removed afterwards.
+5. Writes the COG in the scratch folder, then moves it to `/mnt/output/`, where it is collected as job output. The scratch folder is always removed afterwards.
 
 Outputs are named after the input file:
 
 | Mode | Output |
 |---|---|
-| default (single- or multi-band input) | `outputs/<name>.tif` with all bands |
-| `SPLIT_BANDS=true`, multi-band input | `outputs/<name>_band_<N>.tif`, one per band |
+| default (single- or multi-band input) | `/mnt/output/<name>.tif` with all bands |
+| `SPLIT_BANDS=true`, multi-band input | `/mnt/output/<name>_band_<N>.tif`, one per band |
+
+With `DEVELOPMENT` set, outputs go to `./outputs` instead of `/mnt/output`.
 
 ## What the output looks like
 

@@ -33,9 +33,9 @@ from rio_cogeo.profiles import cog_profiles
 DEVELOPMENT = os.environ.get('DEVELOPMENT', None)
 
 # Selected files are mounted from the workspace drive; anything written
-# to OUTPUT_DIRECTORY is collected by the agent as job output.
+# to OUTPUT_DIRECTORY (/mnt/output in jobs) is collected as job output.
 WDRV_ROOT = '/mnt/wdrv'
-OUTPUT_DIRECTORY = 'outputs'
+OUTPUT_DIRECTORY = 'outputs' if DEVELOPMENT else '/mnt/output'
 WORK_ROOT = os.environ.get('WORK_DIR', '/mnt/tmp')
 
 TILE_SIZE = 256
