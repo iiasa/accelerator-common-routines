@@ -217,7 +217,9 @@ def prepare_source(local_path, work_dir):
 
     Returns the path of the file to convert into a COG.
     """
-    with rasterio.open(local_path, 'r+') as src:
+    # The local copy is a throwaway intermediate, so breaking an input COG's
+    # layout by updating it is fine; GDAL refuses the update without this option.
+    with rasterio.open(local_path, 'r+', IGNORE_COG_LAYOUT_BREAK='YES') as src:
         if src.crs is None:
             crs_override = os.environ.get('INPUT_FILE_CRS')
             if not crs_override:
